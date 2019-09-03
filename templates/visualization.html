@@ -1,0 +1,37 @@
+<!doctype html>
+<html>
+<head>
+<title>Hello from Flask</title>
+
+<script src="/static/d3.min.js"></script>
+<script>
+function loadArticle() {
+    var x = document.getElementById("article_file");
+    var article_div = d3.select("body").select("div")
+    article_div.html("");
+    if (x.files.length == 0) {
+        alert("Select a file.");
+    } else {
+        read = new FileReader();
+        read.readAsText(x.files[0]);
+        read.onloadend = function(){
+            article_div.append("text").html(read.result);
+        }
+    }
+    event.preventDefault();
+}
+</script>
+
+</head>
+<body>
+<h1>Hello, World!</h1>
+<h1>Choose an article:</h1>
+
+<form name="ChooseArticle">
+  <input type="file" id="article_file" accept=".json" onchange="loadArticle()">
+</form>
+
+<div id="article_div"></div>
+
+</body>
+</html>
