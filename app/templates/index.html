@@ -26,15 +26,21 @@
     </div>
     <div class="form">
       <h2>Choose a query:</h2>
-      <select id="query" class="fancy_select" onchange="executeQuery()"></select>
+      <select id="query" class="fancy_select" onchange="executeQuery()">
+
+      </select>
     </div>
     <div id="vis_div" class="row">
       <div id="article_div" class="column">
-        <h2>Column 1</h2>
+        <div>
+          <h3>Choose a heatmap:<h3>
+          <select id="heatmap" onchange="changeHeatmap()"></select>
+        </div>
+        <h2>Reports</h2>
         <p>Some text..</p>
       </div>
       <div id="summary_div" class="column">
-        <h2>Column 2</h2>
+        <h2>Summary</h2>
         <p>Some text..</p>
       </div>
     </div>

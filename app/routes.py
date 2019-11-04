@@ -17,4 +17,10 @@ def index():
     with open(filename, 'r') as f:
         for line in f:
             text += line
-    return startup['interface'].query_text(text, query)
+    results = startup['interface'].query_text(text, query)
+    threshold = .5
+    extracted = {k:[sent for i,sent in enumerate(results['tokenized_text']) if sum(results['heatmaps'][k][i]) > threshold] for k in results['heatmaps'].keys()}
+    results['extracted'] = extracted
+    print(results['score'])
+    print(results['extracted'])
+    return results
