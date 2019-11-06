@@ -1,4 +1,4 @@
-from app import app, startup
+from . import app, startup
 from flask import request, render_template
 from werkzeug import secure_filename
 

@@ -1,12 +1,24 @@
 var current_result = null;
 $(document).ready(function(){
-    populateQuerySelector(queries);
-    $('.fancy_select').select2();
-    $("#query").attr("disabled", true);
-    if (file != "") {
-        loadArticle();
-    }
+    state = new State(queries)
 });
+
+class State {
+    constructor(queries) {
+        populateQuerySelector(queries);
+        $('.fancy_select').select2();
+        this.disableQuery();
+        if (file != "") {
+            loadArticle();
+        }
+    }
+    disableQuery(){
+        $("#query").attr("disabled", true);
+    }
+    enableQuery(){
+        $("#query").attr("disabled", false);
+    }
+}
 
 function loadArticle() {
     if (file != "") {

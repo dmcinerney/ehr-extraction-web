@@ -9,4 +9,4 @@ startup = {
     'interface':None
 }
 
-from app import routes
+from . import routes
