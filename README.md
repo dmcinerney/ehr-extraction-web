@@ -1,14 +1,11 @@
-# text-heatmap-vis
-Visualize text with different kinds of heatmaps overlayed
+# ehr-extraction-web
+
+A visualization and annotation tool for extractive summarization of electronic health records.
 
 ## Run
 
-To run the server, make sure to first set the necessary environment variables:
+To run the server:
 
-    export FLASK_APP=vis_server.py
-    export FLASK_ENV=development
+    python <script_name> <interface_directory> -i <interface>
 
-Then run the server:
-
-    flask run
-
+where `<script_name>` is `validate_extraction.py`, `<interface_directory>` is the directory to the properly set up `ehr-extraction-model` repository from https://github.com/dmcinerney/ehr-extraction-models, and `<interface>` controls which interface in that repository is used (defaults to `interface`).
