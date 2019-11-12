@@ -96,7 +96,7 @@ function populateQuerySelector(queries) {
 }
 
 function tokenizeArticle() {
-    url = 'http://localhost:5000'
+    url = 'http://localhost:5000/tokenize'
     var formData = new FormData();
     if (!file_from_server) {
         var x = document.getElementById("article_file");
@@ -193,4 +193,22 @@ function displayLoader(selection) {
 function closeLoader(selection) {
     console.log("removing loader");
     selection.selectAll(".loader").remove();
+}
+
+function submit() {
+    url = 'http://localhost:5000'
+    var formData = new FormData();
+    formData.append("hello", "world");
+    console.log(formData);
+    $.post({
+        url: url,
+        data: formData,
+        success: function(result, status){
+            console.log(result);
+            console.log(status);
+            location.reload();
+        },
+        processData: false,
+        contentType: false,
+    });
 }

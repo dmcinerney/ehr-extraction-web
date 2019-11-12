@@ -4,9 +4,6 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app)
 
-startup = {
-    'file':None,
-    'interface':None
-}
+startup = {}
 
 from . import routes
