@@ -11,8 +11,7 @@ def get_file():
     print("getting file:", startup['file'])
 
 @app.route('/', methods=['POST'])
-def query_article():
-    query = request.form['query']
+def tokenize_article():
     if startup["file"] is None:
         f = request.files['article']
         filename = 'uploads/' + secure_filename(f.filename)
@@ -25,10 +24,4 @@ def query_article():
     with open(filename, 'r') as f:
         for line in f:
             text += line
-    results = startup['interface'].query_text(text, query)
-    threshold = .5
-    extracted = {k:[[i,sent] for i,sent in enumerate(results['tokenized_text'][:len(results['heatmaps'][k])]) if sum(results['heatmaps'][k][i]) > threshold] for k in results['heatmaps'].keys()}
-    results['extracted'] = extracted
-    print(results['score'])
-    print(results['extracted'])
-    return results
+    return {'tokenized_text': startup['interface'].tokenize(text)}

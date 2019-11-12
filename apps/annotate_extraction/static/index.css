@@ -55,12 +55,12 @@ body {
     background-color: yellow;
 }
 
-.summary_sentence_div {
-    margin-bottom: 10px;
+.article_sentence:hover {
+    background-color: yellow;
 }
 
-.summary_sentence_div p {
-    margin-right: 3px;
+.article_sentence.highlighted {
+    background-color: yellow;
 }
 
 .submit_button {

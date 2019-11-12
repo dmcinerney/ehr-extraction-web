@@ -2,7 +2,7 @@
 <html>
 
   <head>
-    <title>Validate Extraction</title>
+    <title>Annotate Extraction</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
     <link rel="stylesheet" type="text/css" href="/static/index.css">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
@@ -18,7 +18,7 @@
 
   <body>
 
-    <h1>Validate Extraction</h1>
+    <h1>Annotate Extraction</h1>
     <div class="form">
       {% if file_from_server == "true" %}
         <div>file from server</div>
@@ -35,10 +35,6 @@
     <div id="loader_div"></div>
     <div id="vis_div" class="row">
       <div id="article_div" class="column">
-        <div>
-          <h3>Choose a heatmap:<h3>
-          <select id="heatmap" onchange="changeHeatmap()"></select>
-        </div>
         <h2>Reports</h2>
         <p>Some text..</p>
       </div>

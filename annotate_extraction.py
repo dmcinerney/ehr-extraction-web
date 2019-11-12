@@ -1,4 +1,4 @@
-from apps.validate_extraction import app, startup
+from apps.annotate_extraction import app, startup
 from argparse import ArgumentParser
 from utils import directory
 
@@ -12,5 +12,5 @@ if __name__=='__main__':
         startup['file'] = args.file
     with directory(args.interface_dir):
         exec('import '+args.interface)
-    startup['interface'] = eval(args.interface).FullModelInterface()
+    startup['interface'] = eval(args.interface).TokenizerInterface()
     app.run(debug=True)

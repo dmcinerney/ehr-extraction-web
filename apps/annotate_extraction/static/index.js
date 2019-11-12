@@ -12,6 +12,7 @@ class State {
         populateQuerySelector(queries);
         $('.fancy_select').select2();
         this.disableQuery();
+        this.selected_sentences = new Set([]);
     }
     disableQuery(){
         $("#query").attr("disabled", true);
@@ -19,6 +20,33 @@ class State {
     enableQuery(){
         $("#query").attr("disabled", false);
     }
+    clickSentence(i){
+        var selected = d3.select("#sentence_"+i).attr("selected");
+        if (selected == "false") {
+            this.selectSentence(i);
+        } else {
+            this.deselectSentence(i);
+        }
+        var selected_sentences = Array.from(this.selected_sentences);
+        selected_sentences.sort(sortNumber);
+        displaySummary(selected_sentences);
+    }
+    selectSentence(i){
+        var sentence = d3.select("#sentence_"+i);
+        sentence.classed("highlighted", true);
+        sentence.attr("selected", "true");
+        this.selected_sentences.add(i);
+    }
+    deselectSentence(i){
+        var sentence = d3.select("#sentence_"+i);
+        sentence.classed("highlighted", false);
+        sentence.attr("selected", "false");
+        this.selected_sentences.delete(i);
+    }
+}
+
+function sortNumber(a, b) {
+    return a - b;
 }
 
 function loadArticle() {
@@ -46,6 +74,7 @@ function loadArticle() {
         }
         event.preventDefault();
     }
+    tokenizeArticle();
 }
 
 function populateQuerySelector(queries) {
@@ -66,12 +95,9 @@ function populateQuerySelector(queries) {
     }
 }
 
-function executeQuery() {
+function tokenizeArticle() {
     url = 'http://localhost:5000'
     var formData = new FormData();
-    var query_selector = document.getElementById("query");
-    if (query_selector.options[query_selector.selectedIndex].value == 'default') { alert("no query selected"); return; }
-    formData.append("query", query_selector.options[query_selector.selectedIndex].value);
     if (!file_from_server) {
         var x = document.getElementById("article_file");
         formData.append("article", x.files[0]);
@@ -85,7 +111,7 @@ function executeQuery() {
             console.log(result);
             console.log(status);
             current_result = result;
-            displayHeatmap();
+            displayArticle();
             closeLoader(d3.select("body").select("#loader_div"));
         },
         processData: false,
@@ -93,77 +119,26 @@ function executeQuery() {
     });
 }
 
-
-// Note: taken from https://github.com/abisee/attn_vis/blob/master/index.html
-greenhue = 151
-yellowhue = 56
-function toColor(p, hue) {
-    // converts a scalar value p in [0,1] to a HSL color code string with base color hue
-    if (p<0 || p>1) {
-      throw sprintf("Error: p has value %.2f but should be in [0,1]", p)
+function executeQuery() {
+    var query_selector = document.getElementById("query");
+    if (query_selector.options[query_selector.selectedIndex].value == 'default') {
+        alert("no query selected");
     }
-    var saturation = 100; // saturation percentage
-    p = 1-p; // invert so p=0 is light and p=1 is dark
-    var min_lightness = 50; // minimum percentage lightness, i.e. darkest possible color
-    var lightness = (min_lightness + p*(100-min_lightness)); // lightness is proportional to p
-    return sprintf('hsl(%d,%s%%,%s%%)', hue, saturation, lightness);
 }
 
-function displayHeatmap() {
-    populateHeatmapSelector(current_result.heatmaps);
-    changeHeatmap();
-}
-
-function changeHeatmap() {
-    var heatmap_selector = document.getElementById("heatmap");
-    var heatmap = heatmap_selector.options[heatmap_selector.selectedIndex].value
-    console.log(heatmap)
+function displayArticle() {
     var article = d3.select("body").select("#article_div").select("p");
     article.html("");
     article.selectAll("p")
-      .data(current_result.heatmaps[heatmap].map(function(e, i) { return [e, current_result.tokenized_text[i]]; }))
+      .data(current_result.tokenized_text)
       .enter()
       .append("p")
         .attr("id", function(d, i) { return "sentence_"+i; })
+        .attr("selected", "false")
+        .attr("class", "article_sentence")
+        .on("click", function(d, i) { state.clickSentence(i); })
         .selectAll("text")
-        .data(function(d) { return d[0].map(function(e, i) { return [e, d[1][i]]; }); })
-        .enter()
-        .append("div")
-          .style("display", "inline")
-          .each(function(d, i) {
-            var word = d[1];
-            if (i > 0 && !word.startsWith('##')) {
-                d3.select(this).append("text").html(' ');
-            } else {
-                if (word.startsWith('##')) {
-                    word = word.slice(2);
-                }
-            }
-            d3.select(this).append("text")
-              .attr("style", function(d) { return 'display:inline; background-color:' + toColor(d[0], greenhue); })
-              .html(word); });
-    displayExtracted();
-}
-
-function displayExtracted(){
-    var heatmap_selector = document.getElementById("heatmap");
-    var heatmap = heatmap_selector.options[heatmap_selector.selectedIndex].value;
-    console.log(heatmap);
-    var summary = d3.select("body").select("#summary_div").select("p");
-    summary.html("");
-    summary_sentence_div = summary.selectAll("p")
-      .data(current_result.extracted[heatmap])
-      .enter()
-      .append("div")
-        .attr("class", "summary_sentence_div");
-    summary_sentence_div
-      .append("p")
-        .style("display", "inline")
-        .each(function(d) { d3.select("body").select("#article_div").select("p").select("#sentence_"+d[0]).style("background-color", "yellow"); })
-        .on("click", function(d) { d3.select("body").select("#article_div").select("p").select("#sentence_"+d[0]).node().scrollIntoView({block: "center"}); })
-        .attr("class", "summary_sentence")
-        .selectAll("text")
-        .data(function(d) { return d[1]; })
+        .data(function(d) { return d; })
         .enter()
         .append("div")
           .style("display", "inline")
@@ -177,29 +152,37 @@ function displayExtracted(){
                 }
             }
             d3.select(this).append("text")
-              .attr("style", function(d) { return 'display:inline;'; })
+              .style("display", "inline")
               .html(word); });
-    summary_sentence_div
-      .append("select")
-        .selectAll("option")
-        .data(["rate",1,2,3,4,5])
-        .enter()
-        .append("option")
-          .attr("value", function(d) { return d; })
-          .html(function(d) { return d; });
 }
 
-function populateHeatmapSelector(heatmaps) {
-    heatmap = d3.select("body").select("#heatmap");
-    heatmap.html("");
-    for (var key in heatmaps) {
-        if (heatmaps.hasOwnProperty(key)) {
-            console.log(key + " -> " + heatmaps[key]);
-            heatmap.append("option")
-                .attr("value", key)
-                .html(key);
-        }
-    }
+function displaySummary(data) {
+    var summary = d3.select("body").select("#summary_div").select("p");
+    summary.html("");
+    summary.selectAll("p")
+      .data(data)
+      .enter()
+      .append("p")
+        .attr("id", function(d) { return "summary_sentence_"+d; })
+        .attr("class", "summary_sentence")
+        .on("click", function(d) { d3.select("#sentence_"+d).node().scrollIntoView({block: "center"}); })
+        .selectAll("text")
+        .data(function(d) { return d3.select("#sentence_"+d).node().__data__; })
+        .enter()
+        .append("div")
+          .style("display", "inline")
+          .each(function(d, i) {
+            var word = d;
+            if (i > 0 && !word.startsWith('##')) {
+                d3.select(this).append("text").html(' ');
+            } else {
+                if (word.startsWith('##')) {
+                    word = word.slice(2);
+                }
+            }
+            d3.select(this).append("text")
+              .style("display", "inline")
+              .html(word); });
 }
 
 function displayLoader(selection) {
