@@ -11,9 +11,11 @@
     <script src="/static/d3.min.js"></script>
     <script src="/static/sprintf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.10/js/select2.min.js"></script>
-    <script>var file_from_server = {{ file_from_server }};</script>
-    <script>var file = "{{ file }}";</script>
-    <script>var queries = JSON.parse('{{ queries | tojson | safe}}');</script>
+    <script>
+      var file_from_server = {{ file_from_server }};        
+      var file = "{{ file }}";        
+      var queries = JSON.parse('{{ queries | tojson | safe}}');
+    </script>
     <script src="/static/index.js"></script>
   </head>
 

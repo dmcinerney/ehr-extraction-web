@@ -49,14 +49,27 @@ function sortNumber(a, b) {
     return a - b;
 }
 
+function getFile(callback) {
+   url = 'http://localhost:5000/get_file/'+file;
+   $.get(url, callback);
+}
+
 function loadArticle() {
     var article = d3.select("body").select("#article_div").select("p");
     if (file_from_server) {
         console.log(file_from_server);
         // read in file here
-        // print file here
-        article.html("article here");
-        state.enableQuery()
+        if (file == "False") {
+            d3.select("body").html("Done!");
+        } else {
+            getFile(function(data, status, request){
+                console.log(request);
+                console.log(request.getResponseHeader('filename'));
+                d3.select("#article_file").html(request.getResponseHeader('filename'));
+                article.html(data);
+                state.enableQuery();
+            });
+        }
     } else {
         var x = document.getElementById("article_file");
         article.html("");

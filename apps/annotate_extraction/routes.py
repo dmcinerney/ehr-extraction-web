@@ -1,10 +1,20 @@
+from os.path import basename
 from . import app, startup
-from flask import request, render_template
+from flask import request, render_template, send_file, make_response
 from werkzeug import secure_filename
 
 @app.route('/', methods=['GET'])
 def index():
-    return render_template('index.html', file_from_server="false" if startup["file"] is None else "true", queries=startup['interface'].get_queries())
+    print(startup['file'])
+    return render_template('index.html', file_from_server="false" if startup["file"] is None else "true", queries=startup['interface'].get_queries(), file=basename(startup["file"]) if startup["file"] else False)
+
+@app.route('/get_file/<file>', methods=['GET'])
+def get_file(file):
+    print(file)
+    response = make_response(send_file(startup['file']))
+    response.headers['filename'] = basename(startup['file'])
+    print(startup['file'])
+    return response
 
 @app.route('/', methods=['POST'])
 def annotate():
@@ -13,8 +23,10 @@ def annotate():
     if startup['file_generator'] is None:
         startup['file'] = None
     else:
-        startup['file'] = next(startup['file_generator'])
-    print("getting file:", startup['file'])
+        try:
+            startup['file'] = next(startup['file_generator'])
+        except StopIteration:
+            startup['file'] = False
     return {}
 
 @app.route('/tokenize', methods=['POST'])
@@ -31,4 +43,5 @@ def tokenize_article():
     with open(filename, 'r') as f:
         for line in f:
             text += line
-    return {'tokenized_text': startup['interface'].tokenize(text)}
+    results = startup['interface'].tokenize(text)
+    return results
