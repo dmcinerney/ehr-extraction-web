@@ -2,6 +2,11 @@
 
 A visualization and annotation tool for extractive summarization of electronic health records.
 
+## Setup
+
+    pip install -r requirements.txt
+    python -m spacy download en_core_web_sm
+
 ## Run
 
 To run the server:
