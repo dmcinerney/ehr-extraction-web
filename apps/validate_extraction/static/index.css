@@ -68,3 +68,11 @@ body {
 .submit_button {
     text-align: center;
 }
+
+.report_p {
+    display: none;
+}
+
+.report_p.selected {
+    display: block;
+}

@@ -57,14 +57,22 @@ body {
     background-color: yellow;
 }
 
-.article_sentence:hover {
+.reports_sentence:hover {
     background-color: yellow;
 }
 
-.article_sentence.highlighted {
+.reports_sentence.highlighted {
     background-color: yellow;
 }
 
 .submit_button {
     text-align: center;
+}
+
+.report_p {
+    display: none;
+}
+
+.report_p.selected {
+    display: block;
 }

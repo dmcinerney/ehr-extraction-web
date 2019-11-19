@@ -23,22 +23,25 @@
     <h1>Annotate Extraction</h1>
     <div class="form">
       {% if file_from_server == "true" %}
-        <div id="article_file">file from server</div>
+        <div id="reports_file">{{ file }}</div>
       {% else %}
-        <h2>Choose an article:</h2>
-        <input type="file" id="article_file" accept=".txt" onchange="loadArticle()">
+        <h2>Choose a patient file:</h2>
+        <input type="file" id="reports_file" accept=".txt" onchange="loadReports()">
       {% endif %}
     </div>
     <div class="form">
       <h2>Choose a query:</h2>
-      <select id="query" class="fancy_select" onchange="executeQuery()">
+      <select id="query" class="fancy_select" name="state" onchange="chooseQuery()">
       </select>
     </div>
     <div id="loader_div"></div>
     <div id="vis_div" class="row">
-      <div id="article_div" class="column">
+      <div id="reports_div" class="column">
         <h2>Reports</h2>
-        <p>Some text..</p>
+        <h3>Choose a report:</h3>
+        <select id="report" onchange="chooseReport()">
+        </select>
+        <div></div>
       </div>
       <div id="summary_div" class="column">
         <h2>Summary</h2>

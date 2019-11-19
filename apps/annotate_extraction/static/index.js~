@@ -3,7 +3,7 @@ var state = null;
 $(document).ready(function(){
     state = new State(queries)
     if (file_from_server) {
-        loadReports();
+        loadArticle();
     }
 });
 
@@ -12,6 +12,7 @@ class State {
         populateQuerySelector(queries);
         $('.fancy_select').select2();
         this.disableQuery();
+        this.selected_sentences = new Set([]);
     }
     disableQuery(){
         $("#query").attr("disabled", true);
@@ -19,29 +20,75 @@ class State {
     enableQuery(){
         $("#query").attr("disabled", false);
     }
+    clickSentence(i){
+        var selected = d3.select("#sentence_"+i).attr("selected");
+        if (selected == "false") {
+            this.selectSentence(i);
+        } else {
+            this.deselectSentence(i);
+        }
+        var selected_sentences = Array.from(this.selected_sentences);
+        selected_sentences.sort(sortNumber);
+        //displaySummary(selected_sentences);
+        displayTokenizedSummary(selected_sentences);
+    }
+    selectSentence(i){
+        var sentence = d3.select("#sentence_"+i);
+        sentence.classed("highlighted", true);
+        sentence.attr("selected", "true");
+        this.selected_sentences.add(i);
+    }
+    deselectSentence(i){
+        var sentence = d3.select("#sentence_"+i);
+        sentence.classed("highlighted", false);
+        sentence.attr("selected", "false");
+        this.selected_sentences.delete(i);
+    }
 }
 
+function sortNumber(a, b) {
+    return a - b;
+}
 
-function loadReports() {
-    var reports_text_div = d3.select("body").select("#reports_div").select("div");
+function getFile(callback) {
+   url = 'http://localhost:5000/get_file/'+file;
+   $.get(url, callback);
+}
+
+function loadArticle() {
+    var article = d3.select("body").select("#article_div").select("p");
     if (file_from_server) {
+        console.log(file_from_server);
         // read in file here
         if (file == "False") {
             d3.select("body").html("Done!");
         } else {
-            getFile();
+            getFile(function(data, status, request){
+                console.log(request);
+                console.log(request.getResponseHeader('filename'));
+                d3.select("#article_file").html(request.getResponseHeader('filename'));
+                article.html(data);
+                state.enableQuery();
+            });
         }
     } else {
-        var x = document.getElementById("reports_file");
-        reports_text_div.html("");
+        var x = document.getElementById("article_file");
+        article.html("");
         if (x.files.length == 0) {
             state.disableQuery()
+            populateHeatmapSelector({});
             alert("Select a file.");
         } else {
-            getFile();
+            read = new FileReader();
+            read.readAsText(x.files[0]);
+            read.onloadend = function(){
+                article.html(read.result);
+            }
+            state.enableQuery()
         }
         event.preventDefault();
     }
+    tokenizeArticle();
 }
 
 function populateQuerySelector(queries) {
@@ -52,6 +99,7 @@ function populateQuerySelector(queries) {
         .html("Select a Query");
     for (var key in queries) {
         if (queries.hasOwnProperty(key)) {
+            console.log(key + " -> " + queries[key]);
             d3.select("body")
               .select("#query")
               .append("option")
@@ -61,24 +109,26 @@ function populateQuerySelector(queries) {
     }
 }
 
-function getFile() {
-    url = 'http://localhost:5000/get_file';
+function tokenizeArticle() {
+    url = 'http://localhost:5000/tokenize'
     var formData = new FormData();
     if (!file_from_server) {
-        var x = document.getElementById("reports_file");
-        formData.append("reports", x.files[0]);
+        var x = document.getElementById("article_file");
+        formData.append("article", x.files[0]);
     }
-    displayLoader(d3.select("#loader_div"));
+    console.log(formData);
+    displayLoader(d3.select("body").select("#loader_div"));
     $.post({
         url: url,
         data: formData,
         success: function(result, status){
+            console.log(result);
+            console.log(status);
             current_result = result;
             populateReportSelector()
             makeReports();
-            chooseReport();
-            //displayTokenizedReports();
-            state.enableQuery();
+            displayReport();
+            //displayTokenizedArticle();
             closeLoader(d3.select("body").select("#loader_div"));
         },
         processData: false,
@@ -86,29 +136,11 @@ function getFile() {
     });
 }
 
-
 function chooseQuery() {
-    url = 'http://localhost:5000/query'
-    var formData = new FormData();
     var query_selector = document.getElementById("query");
-    if (query_selector.options[query_selector.selectedIndex].value == 'default') { alert("no query selected"); return; }
-    formData.append("query", query_selector.options[query_selector.selectedIndex].value);
-    if (!file_from_server) {
-        var x = document.getElementById("reports_file");
-        formData.append("reports", x.files[0]);
+    if (query_selector.options[query_selector.selectedIndex].value == 'default') {
+        alert("no query selected");
     }
-    displayLoader(d3.select("body").select("#loader_div"));
-    $.post({
-        url: url,
-        data: formData,
-        success: function(result, status){
-            current_result = result; // TODO: just change whatever you have in the current result
-            displayHeatmap();
-            closeLoader(d3.select("body").select("#loader_div"));
-        },
-        processData: false,
-        contentType: false,
-    });
 }
 
 function populateReportSelector() {
@@ -122,16 +154,18 @@ function populateReportSelector() {
 }
 
 function chooseReport() {
+    displayReport();
+}
+
+function displayReport() {
     var report_selector = document.getElementById("report");
     var report = report_selector.options[report_selector.selectedIndex].value
-    d3.select("#reports_div").select("div").selectAll(".report_p")
-      .classed("selected", function(d, i) { return i == report; })
+    d3.select("#reports_div").select("div").selectAll("p")
+      .classed("visible", function(d, i) { console.log("hello");console.log(i);console.log(report);return i == report; })
 }
 
 function makeReports() {
-    var reports_text_div = d3.select("#reports_div").select("div");
-    reports_text_div.html("");
-    var report_p = reports_text_div.selectAll("p")
+    var report_p = d3.select("#reports_div").select("div").selectAll("p")
       .data(current_result.sentence_spans)
       .enter()
       .append("p")
@@ -152,6 +186,7 @@ function makeReports() {
           } else {
               var start = current_result.sentence_spans[d[0]][i-1][2];
           }
+          console.log(d);
           var end = d[1][1];
           return current_result.original_reports[d[0]][3].slice(start, end); });
 
@@ -161,8 +196,8 @@ function makeReports() {
         .style("display", "inline")
         .attr("id", function(d) { return "sentence_"+d[1][0]; })
         .attr("selected", "false")
-        .attr("class", "reports_sentence")
-        .attr("report_id", function(d) { return d[0]; })
+        .attr("class", "article_sentence")
+        .on("click", function(d) { state.clickSentence(d[1][0]); })
         .html(function(d) {
           return current_result.original_reports[d[0]][3].slice(d[1][1], d[1][2]); });
 
@@ -176,61 +211,19 @@ function makeReports() {
         return current_result.original_reports[i][3].slice(start, end); });
 }
 
-// Note: taken from https://github.com/abisee/attn_vis/blob/master/index.html
-greenhue = 151
-yellowhue = 56
-function toColor(p, hue) {
-    // converts a scalar value p in [0,1] to a HSL color code string with base color hue
-    if (p<0 || p>1) {
-      throw sprintf("Error: p has value %.2f but should be in [0,1]", p)
-    }
-    var saturation = 100; // saturation percentage
-    p = 1-p; // invert so p=0 is light and p=1 is dark
-    var min_lightness = 50; // minimum percentage lightness, i.e. darkest possible color
-    var lightness = (min_lightness + p*(100-min_lightness)); // lightness is proportional to p
-    return sprintf('hsl(%d,%s%%,%s%%)', hue, saturation, lightness);
-}
-
-function displayHeatmap() {
-    changeHeatmap();
-}
-
-const arrSum = arr => arr.reduce((a,b) => a + b, 0)
-
-function changeHeatmap() {
-    var heatmap = 'sentence_level_attention'
-    d3.selectAll(".reports_sentence")
-      .style("background-color", function(d){
-        var sentence_attention = current_result.heatmaps[heatmap][d[1][0]]
-        return toColor(arrSum(sentence_attention), greenhue); });
-    displayExtracted();
-}
-
-function displayExtracted(){
-    var heatmap = 'sentence_level_attention'
-    var summary = d3.select("body").select("#summary_div").select("p");
-    summary.html("");
-    summary_sentence_div = summary.selectAll("p")
-      .data(current_result.extracted[heatmap])
+function displayTokenizedArticle() {
+    var reports_text_div = d3.select("body").select("#reports_div").select("div");
+    reports_text_div.html("");
+    reports_text_div.selectAll("p")
+      .data(current_result.tokenized_text)
       .enter()
-      .append("div")
-        .attr("class", "summary_sentence_div");
-    summary_sentence_div
       .append("p")
-        .style("display", "inline")
-        .each(function(d) {
-          d3.select("#sentence_"+d[0])
-            .style("border", "3px")
-            .style("border-color", "#000000")
-            .style("border-style", "solid"); })
-        .on("click", function(d) {
-          var sentence = d3.select("#sentence_"+d[0]);
-          d3.select("#report").node().selectedIndex = sentence.attr("report_id");
-          chooseReport();
-          sentence.node().scrollIntoView({block: "center"}); })
-        .attr("class", "summary_sentence")
+        .attr("id", function(d, i) { return "sentence_"+i; })
+        .attr("selected", "false")
+        .attr("class", "article_sentence")
+        .on("click", function(d, i) { state.clickSentence(i); })
         .selectAll("text")
-        .data(function(d) { return d[1]; })
+        .data(function(d) { return d; })
         .enter()
         .append("div")
           .style("display", "inline")
@@ -244,12 +237,37 @@ function displayExtracted(){
                 }
             }
             d3.select(this).append("text")
-              .style("display","inline")
+              .style("display", "inline")
               .html(word); });
-    summary_sentence_div
-      .append("input")
-        .attr("type", "checkbox")
-        .style("display", "inline");
+}
+
+function displayTokenizedSummary(data) {
+    var summary = d3.select("body").select("#summary_div").select("p");
+    summary.html("");
+    summary.selectAll("p")
+      .data(data)
+      .enter()
+      .append("p")
+        .attr("id", function(d) { return "summary_sentence_"+d; })
+        .attr("class", "summary_sentence")
+        .on("click", function(d) { d3.select("#sentence_"+d).node().scrollIntoView({block: "center"}); })
+        .selectAll("text")
+        .data(function(d) { return current_result.tokenized_text[d]; })
+        .enter()
+        .append("div")
+          .style("display", "inline")
+          .each(function(d, i) {
+            var word = d;
+            if (i > 0 && !word.startsWith('##')) {
+                d3.select(this).append("text").html(' ');
+            } else {
+                if (word.startsWith('##')) {
+                    word = word.slice(2);
+                }
+            }
+            d3.select(this).append("text")
+              .style("display", "inline")
+              .html(word); });
 }
 
 function displayLoader(selection) {
@@ -258,6 +276,7 @@ function displayLoader(selection) {
 }
 
 function closeLoader(selection) {
+    console.log("removing loader");
     selection.selectAll(".loader").remove();
 }
 
@@ -265,11 +284,14 @@ function submit() {
     url = 'http://localhost:5000'
     var formData = new FormData();
     formData.append("hello", "world");
+    console.log(formData);
     $.post({
         url: url,
         data: formData,
         success: function(result, status){
-            location.reload(true);
+            console.log(result);
+            console.log(status);
+            location.reload();
         },
         processData: false,
         contentType: false,
