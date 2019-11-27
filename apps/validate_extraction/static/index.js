@@ -1,29 +1,40 @@
 var current_result = null;
 var state = null;
 $(document).ready(function(){
-    state = new State(queries)
+    state = new State();
     if (file_from_server) {
         loadReports();
     }
 });
 
 class State {
-    constructor(queries) {
-        populateQuerySelector(queries);
-        $('.fancy_select').select2();
-        this.disableQuery();
+    constructor() {
+        populateTagSelector();
+        this.tag_sentences = {};
     }
-    disableQuery(){
-        $("#query").attr("disabled", true);
+    disableVis(){
+        d3.selectAll(".column")
+          .classed("disabled", true)
+          .selectAll("*")
+          .classed("disabled", true);
+        d3.select("#tag").classed("disabled", true);
     }
-    enableQuery(){
-        $("#query").attr("disabled", false);
+    enableVis(){
+        d3.selectAll(".column")
+          .classed("disabled", false)
+          .selectAll("*")
+          .classed("disabled", false);
+        d3.select("#tag").classed("disabled", false);
     }
+}
+
+function sortNumber(a, b) {
+    return a - b;
 }
 
 
 function loadReports() {
-    var reports_text_div = d3.select("body").select("#reports_div").select("div");
+    var reports_text_div = d3.select("#reports_div").select(".custom_text");
     if (file_from_server) {
         // read in file here
         if (file == "False") {
@@ -35,7 +46,6 @@ function loadReports() {
         var x = document.getElementById("reports_file");
         reports_text_div.html("");
         if (x.files.length == 0) {
-            state.disableQuery()
             alert("Select a file.");
         } else {
             getFile();
@@ -44,21 +54,21 @@ function loadReports() {
     }
 }
 
-function populateQuerySelector(queries) {
-    d3.select("body")
-      .select("#query")
+function populateTagSelector() {
+    d3.select("#tag")
       .append("option")
         .attr("value", "default")
-        .html("Select a Query");
+        .html("Select a Tag")
+        .attr("disabled", true);
     for (var key in queries) {
         if (queries.hasOwnProperty(key)) {
-            d3.select("body")
-              .select("#query")
+            d3.select("#tag")
               .append("option")
                 .attr("value", key)
                 .html(key + ": " + queries[key]);
         }
     }
+    $("#tag").selectpicker('refresh');
 }
 
 function getFile() {
@@ -77,59 +87,50 @@ function getFile() {
             populateReportSelector()
             makeReports();
             chooseReport();
-            //displayTokenizedReports();
-            state.enableQuery();
-            closeLoader(d3.select("body").select("#loader_div"));
+            closeLoader(d3.select("#loader_div"));
         },
         processData: false,
         contentType: false,
     });
 }
 
-
-function chooseQuery() {
-    url = 'http://localhost:5000/query'
-    var formData = new FormData();
-    var query_selector = document.getElementById("query");
-    if (query_selector.options[query_selector.selectedIndex].value == 'default') { alert("no query selected"); return; }
-    formData.append("query", query_selector.options[query_selector.selectedIndex].value);
-    if (!file_from_server) {
-        var x = document.getElementById("reports_file");
-        formData.append("reports", x.files[0]);
-    }
-    displayLoader(d3.select("body").select("#loader_div"));
-    $.post({
-        url: url,
-        data: formData,
-        success: function(result, status){
-            current_result = result; // TODO: just change whatever you have in the current result
-            displayHeatmap();
-            closeLoader(d3.select("body").select("#loader_div"));
-        },
-        processData: false,
-        contentType: false,
-    });
+function chooseTag() {
+    chooseQuery();
 }
 
 function populateReportSelector() {
+    state.report_idxs = {};
     d3.select("#report")
       .selectAll("option")
       .data(current_result.original_reports)
       .enter()
       .append("option")
         .attr("value", function(d) { return d[0]; })
-        .html(function(d) { return d[0]+'. '+d[1]+', '+d[2]; });
+        .html(function(d) { return d[0]+'. '+d[1]+', '+d[2]; })
+    $("#report").selectpicker('refresh');
+}
+
+function nextReport() {
+    d3.select("#report").node().selectedIndex = d3.select("#report").node().selectedIndex+1;
+    chooseReport();
+}
+
+function previousReport() {
+    d3.select("#report").node().selectedIndex = d3.select("#report").node().selectedIndex-1;
+    chooseReport();
 }
 
 function chooseReport() {
-    var report_selector = document.getElementById("report");
-    var report = report_selector.options[report_selector.selectedIndex].value
-    d3.select("#reports_div").select("div").selectAll(".report_p")
-      .classed("selected", function(d, i) { return i == report; })
+    var report = document.getElementById("report").selectedIndex;
+    d3.select("#reports_div").select(".custom_text").selectAll(".report_p")
+      .classed("selected", function(d, i) { return i == report; });
+    d3.select("#previous").classed("disabled", d3.select("#report").node().selectedIndex == 0);
+    d3.select("#next").classed("disabled", d3.select("#report").node().selectedIndex == current_result.original_reports.length-1);
+    $("#report").selectpicker('refresh');
 }
 
 function makeReports() {
-    var reports_text_div = d3.select("#reports_div").select("div");
+    var reports_text_div = d3.select("#reports_div").select(".custom_text");
     reports_text_div.html("");
     var report_p = reports_text_div.selectAll("p")
       .data(current_result.sentence_spans)
@@ -144,8 +145,7 @@ function makeReports() {
 
     // Add anything in orginal report before the sentence
     divs_for_sentence_and_in_between
-      .append("p")
-        .style("display", "inline")
+      .append("text")
         .html(function(d, i) {
           if (i == 0) {
               var start = 0;
@@ -157,8 +157,7 @@ function makeReports() {
 
     // Add the sentence
     divs_for_sentence_and_in_between
-      .append("p")
-        .style("display", "inline")
+      .append("text")
         .attr("id", function(d) { return "sentence_"+d[1][0]; })
         .attr("selected", "false")
         .attr("class", "reports_sentence")
@@ -168,12 +167,148 @@ function makeReports() {
 
     // Add anything in original report after the last sentence
     report_p.append("div")
-      .append("p")
-      .style("display", "inline")
+      .append("text")
       .html(function(d, i) {
         var start = current_result.sentence_spans[i][current_result.sentence_spans[i].length-1][2];
         var end = current_result.original_reports[i][3].length;
         return current_result.original_reports[i][3].slice(start, end); });
+}
+
+
+function highlightMomentarily(selection) {
+    selection
+      .interrupt("highlightMomentarily");
+    var original_color = selection.style("border-color");
+    selection
+      .style("border-color", "red")
+      .transition("highlightMomentarily").duration(2000)
+      .on("interrupt", function(){ selection.style("border-color", null); })
+      .on("end", function(){ selection.style("border-color", null); })
+      .style("border-color", original_color);
+}
+
+function displayTokenizedSummary() {
+    var summary = d3.select("#summary_div").select(".custom_text");
+    summary.html("");
+    summary_p = summary.selectAll("p")
+      .data(Object.keys(state.tag_sentences))
+      .enter()
+      .append("p")
+        .attr("class", "summary_p")
+        .attr("id", function(d) { return "tag_"+d; });
+    summary_p.append("p")
+      .attr("class", "tagheader")
+      .html(function(d) { return d + ": " + queries[d]; });
+    sentence_p = summary_p.selectAll(".summary_sentence")
+      .data(function(d) { return Array.from(state.tag_sentences[d]).sort(sortNumber).map(function(e){ return [d, e]; }); })
+      .enter()
+      .append("p")
+        .attr("class", "summary_sentence")
+        .attr("id", function(d) { return "summary_sentence_"+d[0]+"_"+d[1]; })
+        .attr("tag", function(d) { return d[0]; })
+        .attr("sentence", function(d) { return d[1]; });
+    sentence_p.append("div")
+      .attr("class", "summary_sentence_text")
+      .on("click", function(d) {
+        var sentence = d3.select("#sentence_"+d[1]);
+        d3.select("#report").node().selectedIndex = sentence.attr("report_id");
+        chooseReport();
+        sentence.node().scrollIntoView({block: "center"});
+        highlightMomentarily(sentence); })
+      .selectAll("div")
+      .data(function(d) { return current_result.tokenized_text[d[1]]; })
+      .enter()
+      .append("div")
+        .style("display", "inline")
+        .each(function(d, i) {
+          var word = d;
+          if (i > 0 && !word.startsWith('##')) {
+              d3.select(this).append("text").html(' ');
+          } else {
+              if (word.startsWith('##')) {
+                  word = word.slice(2);
+              }
+          }
+          d3.select(this).append("text")
+            .style("display", "inline")
+            .html(word); });
+    checkbox_container = sentence_p.append("div")
+      .attr("class", "custom-control custom-checkbox form-control-lg");
+    checkbox_container.append("input")
+      .attr("type", "checkbox")
+      .attr("class", "custom-control-input")
+      .attr("id", function(d) { return "checkbox_"+d[0]+"_"+d[1]; });
+    checkbox_container.append("label")
+      .attr("class", "custom-control-label")
+      .attr("for", function(d) { return "checkbox_"+d[0]+"_"+d[1]; });
+}
+
+function displayLoader(selection) {
+    selection.append("div")
+        .attr("class", "loader");
+}
+
+function closeLoader(selection) {
+    selection.selectAll(".loader").remove();
+}
+
+function submit() {
+    url = 'http://localhost:5000/'
+    var formData = new FormData();
+    formData.append("hello", "world");
+    $.post({
+        url: url,
+        data: formData,
+        success: function(result, status){
+            location.reload();
+        },
+        processData: false,
+        contentType: false,
+    });
+}
+
+function chooseQuery() {
+    url = 'http://localhost:5000/query';
+    var formData = new FormData();
+    var tag_selector = document.getElementById("tag");
+    var tag = tag_selector.options[tag_selector.selectedIndex].value;
+    if (tag == 'default') { alert("no query selected"); return; }
+    formData.append("query", tag);
+    if (!file_from_server) {
+        var x = document.getElementById("reports_file");
+        formData.append("reports", x.files[0]);
+    }
+    displayLoader(d3.select("#loader_div"));
+    $.post({
+        url: url,
+        data: formData,
+        success: function(result, status){
+            current_result = result; // TODO: just change whatever you have in the current result
+            displayModelAnnotations();
+            displayTokenizedSummary();
+            closeLoader(d3.select("#loader_div"));
+        },
+        processData: false,
+        contentType: false,
+    });
+}
+
+const arrSum = arr => arr.reduce((a,b) => a + b, 0);
+
+function displayModelAnnotations() {
+    var tag_selector = document.getElementById("tag");
+    var tag = tag_selector.options[tag_selector.selectedIndex].value;
+    var heatmap = 'sentence_level_attention';
+    state.tag_sentences = {}
+    state.tag_sentences[tag] = new Set(current_result.extracted[heatmap]);
+    d3.selectAll(".reports_sentence")
+      .style("background-color", function(d){
+        if (d[1][0] > current_result.heatmaps[heatmap].length-1) { return "lightgrey";}
+        var sentence_attention = current_result.heatmaps[heatmap][d[1][0]];
+        console.log(sentence_attention);
+        console.log(d[1][0]);
+        return toColor(arrSum(sentence_attention), greenhue); })
+      .classed("selected", function(d) { return state.tag_sentences[tag].has(d[1][0]); })
 }
 
 // Note: taken from https://github.com/abisee/attn_vis/blob/master/index.html
@@ -189,89 +324,4 @@ function toColor(p, hue) {
     var min_lightness = 50; // minimum percentage lightness, i.e. darkest possible color
     var lightness = (min_lightness + p*(100-min_lightness)); // lightness is proportional to p
     return sprintf('hsl(%d,%s%%,%s%%)', hue, saturation, lightness);
-}
-
-function displayHeatmap() {
-    changeHeatmap();
-}
-
-const arrSum = arr => arr.reduce((a,b) => a + b, 0)
-
-function changeHeatmap() {
-    var heatmap = 'sentence_level_attention'
-    d3.selectAll(".reports_sentence")
-      .style("background-color", function(d){
-        var sentence_attention = current_result.heatmaps[heatmap][d[1][0]]
-        return toColor(arrSum(sentence_attention), greenhue); });
-    displayExtracted();
-}
-
-function displayExtracted(){
-    var heatmap = 'sentence_level_attention'
-    var summary = d3.select("body").select("#summary_div").select("p");
-    summary.html("");
-    summary_sentence_div = summary.selectAll("p")
-      .data(current_result.extracted[heatmap])
-      .enter()
-      .append("div")
-        .attr("class", "summary_sentence_div");
-    summary_sentence_div
-      .append("p")
-        .style("display", "inline")
-        .each(function(d) {
-          d3.select("#sentence_"+d[0])
-            .style("border", "3px")
-            .style("border-color", "#000000")
-            .style("border-style", "solid"); })
-        .on("click", function(d) {
-          var sentence = d3.select("#sentence_"+d[0]);
-          d3.select("#report").node().selectedIndex = sentence.attr("report_id");
-          chooseReport();
-          sentence.node().scrollIntoView({block: "center"}); })
-        .attr("class", "summary_sentence")
-        .selectAll("text")
-        .data(function(d) { return d[1]; })
-        .enter()
-        .append("div")
-          .style("display", "inline")
-          .each(function(d, i) {
-            var word = d;
-            if (i > 0 && !word.startsWith('##')) {
-                d3.select(this).append("text").html(' ');
-            } else {
-                if (word.startsWith('##')) {
-                    word = word.slice(2);
-                }
-            }
-            d3.select(this).append("text")
-              .style("display","inline")
-              .html(word); });
-    summary_sentence_div
-      .append("input")
-        .attr("type", "checkbox")
-        .style("display", "inline");
-}
-
-function displayLoader(selection) {
-    selection.append("div")
-        .attr("class", "loader");
-}
-
-function closeLoader(selection) {
-    selection.selectAll(".loader").remove();
-}
-
-function submit() {
-    url = 'http://localhost:5000'
-    var formData = new FormData();
-    formData.append("hello", "world");
-    $.post({
-        url: url,
-        data: formData,
-        success: function(result, status){
-            location.reload(true);
-        },
-        processData: false,
-        contentType: false,
-    });
 }

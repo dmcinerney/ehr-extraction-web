@@ -2,7 +2,7 @@
 <html>
 
   <head>
-    <title>Validate Extraction</title>
+    <title>Annotate Extraction</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.9/dist/css/bootstrap-select.min.css">
     <link rel="stylesheet" type="text/css" href="/static/index.css">
@@ -21,7 +21,7 @@
   </head>
 
   <body>
-    <h1>Validate Extraction</h1>
+    <h1>Annotate Extraction</h1>
     <div class="row">
       {% if file_from_server == "true" %}
         <text id="reports_file">Patient File: {{ file }}</text>
@@ -30,37 +30,35 @@
         <input type="file" id="reports_file" accept=".txt" onchange="loadReports()">
       {% endif %}
     </div>
-    <div id="loader_div" class="row"></div>
+    <div id="loader_div"></div>
     <div id="column_headers" class="row">
       <div id="reports_header_div" class="column box colheader">
         <text class="headertext">Reports</text>
+        <select id="report" onchange="chooseReport()">
+        </select>
       </div>
-      <div id="summary_header_div" class="column box colheader">
+      <div  id="summary_header_div" class="column box colheader">
         <text class="headertext">Summary</text>
+        <select id="query" class="selectpicker" data-live-search="true" form-control onchange="chooseQuery()">
+        </select>
       </div>
     </div>
     <div id="vis_div" class="row">
       <div id="reports_div" class="column box colbody">
-        <div class="buttons">
-          <button id="previous" class="btn btn-primary" onclick="previousReport()">Previous</button>
-          <select id="report" class="selectpicker" onchange="chooseReport()">
-          </select>
-          <button id="next" class="btn btn-primary" onclick="nextReport()">Next</button>
+        <div id="buttons">
+          <button id="previous" type="button" class="btn btn-primary" onclick="previousReport()">Previous</button>
+          <button id="next" type="button" class="btn btn-primary" onclick="nextReport()">Next</button>
         </div>
-        <div class="custom_text">
+        <div class="text">
         </div>
       </div>
       <div id="summary_div" class="column box text colbody">
-        <div class="buttons">
-          <select id="tag" class="selectpicker" data-live-search="true" form-control onchange="chooseTag()">
-          </select>
-        </div>
-        <div class="custom_text">
+        <div class="text">
         </div>
       </div>
     </div>
-    <div class="row">
-      <button class="btn btn-primary btn-block" onclick="submit()">Submit</button>
+    <div class="submit_button">
+      <button type="button" class="btn btn-primary" onclick="submit()">Submit</button>
     </div>
   </body>
 

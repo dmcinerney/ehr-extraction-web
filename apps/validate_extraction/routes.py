@@ -12,7 +12,7 @@ def index():
 @app.route('/get_file', methods=['POST'])
 def get_file():
     if startup["file"] is None:
-        f = request.files['report']
+        f = request.files['reports']
         filename = 'uploads/' + secure_filename(f.filename)
         f.save(filename)
     elif isinstance(startup["file"], str):
@@ -52,8 +52,8 @@ def query_article():
     reports = pd.read_csv(filename, parse_dates=['date'])
     results = startup['interface'].query_reports(reports, query)
     results['original_reports'] = [(i,report.report_type,str(report.date),report.text) for i,report in results['original_reports'].iterrows()]
-    threshold = .8
-    extracted = {k:[[i,sent] for i,sent in enumerate(results['tokenized_text'][:len(results['heatmaps'][k])]) if sum(results['heatmaps'][k][i]) > threshold] for k in results['heatmaps'].keys()}
+    threshold = .5
+    extracted = {k:[i for i,sent in enumerate(results['tokenized_text'][:len(results['heatmaps'][k])]) if sum(results['heatmaps'][k][i]) > threshold] for k in results['heatmaps'].keys()}
     results['extracted'] = extracted
     if 'score' in results.keys():
         print(results['score'])
