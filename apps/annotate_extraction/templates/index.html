@@ -52,7 +52,7 @@
       </div>
       <div id="summary_div" class="column box colbody">
         <div class="buttons">
-          <select id="tag" class="selectpicker" data-live-search="true" onchange="chooseTag()">
+          <select id="tag" class="selectpicker" data-live-search="true" onchange="displayTag()">
           </select>
           <button id="next" class="btn btn-primary" onclick="showAllSummaries()">Show All</button>
         </div>
@@ -61,6 +61,9 @@
         <div id="sentence_tags">
           <p id="sentenceheader"><b>Selected Sentence:</b> </p>
           <div class="custom_text">
+            <p><b>Tags:</b></p>
+            <ul>
+            </ul>
           </div>
           <select id="sentence_tag" class="selectpicker" data-live-search="true" onchange="addSentenceTag()">
           </select>

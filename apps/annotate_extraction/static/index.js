@@ -9,11 +9,16 @@ $(document).ready(function(){
 
 class State {
     constructor() {
-        populateTagSelector(d3.select("#tag"));
         this.tag_sentences = {};
         this.sentence_tags = {};
         this.switchToTagSentences();
+        this.query_keys = Object.keys(queries);
+        var query_indices = {};
+        this.query_keys.forEach(function(e, i) { query_indices[e] = i; } );
+        this.query_indices = query_indices;
+        this.populateTagSelector(d3.select("#tag"));
         this.selected_sentence = null;
+        this.report_selected_sentences = new Set([]);
     }
     disableVis(){
         d3.selectAll(".column")
@@ -40,7 +45,6 @@ class State {
     tagSentence(i, tag){
         if (tag == 'default') {
             this.selected_sentence = i;
-            if (!(i in this.sentence_tags)) { this.sentence_tags[i] = new Set([]); }
             this.switchToSentenceTags();
             displaySentenceTags(i);
         } else {
@@ -52,7 +56,12 @@ class State {
                 this.sentence_tags[i].add(tag);
                 if (!(tag in this.tag_sentences)) { this.tag_sentences[tag] = new Set([]); }
                 this.tag_sentences[tag].add(i);
+                var report = d3.select("#sentence_"+i).attr("report_id");
+                if (!(report in this.report_selected_sentences)) { this.report_selected_sentences[report] = new Set([]); }
+                this.report_selected_sentences[report].add(i);
                 displayTokenizedSummary();
+                boldTags();
+                boldReports();
             }
         }
     }
@@ -69,8 +78,47 @@ class State {
             d3.select("#tag_"+tag).remove();
             delete this.tag_sentences[tag];
         }
+        var report = d3.select("#sentence_"+i).attr("report_id");
+        this.report_selected_sentences[report].delete(i);
+        if (this.report_selected_sentences[report].size == 0) {
+            delete this.report_selected_sentences[report];
+        }
+        boldTags();
+        boldReports();
     }
-    //create remove sentence
+    populateTagSelector(tag_selector, default_option="Select a Tag") {
+        tag_selector.html("");
+        tag_selector.append("option")
+          .attr("value", "default")
+          .html(default_option)
+          .attr("disabled", true);
+        tag_selector.selectAll(".tags")
+          .data(this.query_keys)
+          .enter()
+          .append("option")
+            .attr("value", function(d) { return d; })
+            .html(function(d) { return d + ": " + queries[d]; });
+        $("#"+tag_selector.attr("id")).selectpicker('refresh');
+    }
+}
+
+function boldReports() {
+    var bold_reports = Object.keys(state.report_selected_sentences);
+    d3.select("#report").selectAll("option").classed("bold_option", function(d, i){
+      return i in bold_reports; });
+    $("#report").selectpicker('refresh');
+}
+
+function boldTags() {
+    console.log("bolding tags");
+    d3.select("#tag").selectAll("option").classed("bold_option", function(){
+      tag = d3.select(this).attr("value");
+      if (tag == "default") {
+          return false;
+      } else {
+          return state.tag_sentences[tag] != null && state.tag_sentences[tag].size > 0;
+      }})
+    $("#tag").selectpicker('refresh');
 }
 
 function sortNumber(a, b) {
@@ -99,24 +147,6 @@ function loadReports() {
     }
 }
 
-function populateTagSelector(tag_selector, default_option="Select a Tag") {
-    tag_selector.html("");
-    tag_selector.append("option")
-      .attr("value", "default")
-      .html(default_option)
-      .attr("disabled", true);
-    tag_selector.selectAll(".tags")
-      .data(Object.keys(queries))
-      .enter()
-      .append("option")
-        .attr("value", function(d) { return d; })
-        .html(function(d) { return d + ": " + queries[d]; });
-    $("#"+tag_selector.attr("id")).selectpicker('refresh');
-}
-
-function boldItems(selector, indices) {
-    selector.classed("bold", function(d, i) { return indices; })
-}
 
 function getFile() {
     url = 'http://localhost:5000/get_file';
@@ -141,16 +171,13 @@ function getFile() {
     });
 }
 
-function chooseTag() {
-    displayTag();
-}
-
 function displayTag() {
     state.switchToTagSentences();
     var tag_selector = document.getElementById("tag");
     var tag = tag_selector.options[tag_selector.selectedIndex].value;
     d3.selectAll(".summary_p")
       .classed("selected", function(d) { return d == tag; });
+    $("#tag").selectpicker('refresh');
 }
 
 function addSentenceTag() {
@@ -310,18 +337,25 @@ function displaySentenceTags(i) {
     sentence_header.exit().remove();
     sentence_header.enter().append("div").style("display", "inline").each(displayTokenizedSentence);
     sentence_header.each(displayTokenizedSentence);
-    sentence_tags.select(".custom_text").html("");
-    console.log(state.sentence_tags[i]);
-    sentence_tags.select(".custom_text").selectAll("p")
-      .data(Array.from(state.sentence_tags[i]).map(function(e){ return [i, e]; }))
+    sentence_tags_list = sentence_tags.select(".custom_text").select("ul").html("");
+    sentence_tags_list.selectAll("li")
+      .data(function(){
+        if (state.sentence_tags[i] != null) {
+            return Array.from(state.sentence_tags[i]).map(function(e){ return [i, e]; })
+        } else {
+            return [];
+        }})
       .enter()
-      .append("p")
+      .append("li")
         .attr("class", "sentence_tag")
         .attr("id", function(d) { return "sentence_tag_"+d[0]+"_"+d[1]; })
         .attr("tag", function(d) { return d[1]; })
         .attr("sentence", function(d) { return d[0]; })
-        .html(function(d) { console.log(d);return d[1] + ": " + queries[d[1]]; });
-    populateTagSelector(d3.select("#sentence_tag"), "Add a Tag to this Sentence");
+        .html(function(d) { console.log(d);return d[1] + ": " + queries[d[1]]; })
+        .on("click", function(d) {
+          document.getElementById("tag").selectedIndex = state.query_indices[d[1]] + 1;
+          displayTag(); });
+    state.populateTagSelector(d3.select("#sentence_tag"), "Add a Tag to this Sentence");
 }
 
 function displayTokenizedSentence(d, i) {

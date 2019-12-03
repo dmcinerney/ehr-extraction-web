@@ -1,9 +1,9 @@
-/*
+
 .disabled {
     opacity: .7;
     pointer-events: none;
 }
-*/
+
 
 body {
     padding: 10px;
@@ -103,6 +103,11 @@ body {
     color: white;
 }
 
+.sentence_tag:hover {
+    background-color: #017BFF;
+    color: white;
+}
+
 .reports_sentence {
     border: 2px;
     border-color:lightgrey;
@@ -188,4 +193,8 @@ body {
 
 #next {
     flex: 0 1 100px;
+}
+
+.bold_option {
+    font-weight: bold;
 }
