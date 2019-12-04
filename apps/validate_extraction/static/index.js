@@ -9,7 +9,11 @@ $(document).ready(function(){
 
 class State {
     constructor() {
-        populateTagSelector();
+        this.query_keys = Object.keys(queries);
+        var query_indices = {};
+        this.query_keys.forEach(function(e, i) { query_indices[e] = i; } );
+        this.query_indices = query_indices;
+        this.populateTagSelector(d3.select("#tag"));
         this.tag_sentences = {};
     }
     disableVis(){
@@ -25,6 +29,20 @@ class State {
           .selectAll("*")
           .classed("disabled", false);
         d3.select("#tag").classed("disabled", false);
+    }
+    populateTagSelector(tag_selector, default_option="Select a Tag") {
+        tag_selector.html("");
+        tag_selector.append("option")
+          .attr("value", "default")
+          .html(default_option)
+          .attr("disabled", true);
+        tag_selector.selectAll(".tags")
+          .data(this.query_keys)
+          .enter()
+          .append("option")
+            .attr("value", function(d) { return d; })
+            .html(function(d) { return d + ": " + queries[d]; });
+        $("#"+tag_selector.attr("id")).selectpicker('refresh');
     }
 }
 
@@ -54,23 +72,6 @@ function loadReports() {
     }
 }
 
-function populateTagSelector() {
-    d3.select("#tag")
-      .append("option")
-        .attr("value", "default")
-        .html("Select a Tag")
-        .attr("disabled", true);
-    for (var key in queries) {
-        if (queries.hasOwnProperty(key)) {
-            d3.select("#tag")
-              .append("option")
-                .attr("value", key)
-                .html(key + ": " + queries[key]);
-        }
-    }
-    $("#tag").selectpicker('refresh');
-}
-
 function getFile() {
     url = 'http://localhost:5000/get_file';
     var formData = new FormData();
@@ -84,7 +85,7 @@ function getFile() {
         data: formData,
         success: function(result, status){
             current_result = result;
-            populateReportSelector()
+            populateReportSelector();
             makeReports();
             chooseReport();
             closeLoader(d3.select("#loader_div"));
@@ -99,7 +100,6 @@ function chooseTag() {
 }
 
 function populateReportSelector() {
-    state.report_idxs = {};
     d3.select("#report")
       .selectAll("option")
       .data(current_result.original_reports)

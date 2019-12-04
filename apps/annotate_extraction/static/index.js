@@ -18,7 +18,8 @@ class State {
         this.query_indices = query_indices;
         this.populateTagSelector(d3.select("#tag"));
         this.selected_sentence = null;
-        this.report_selected_sentences = new Set([]);
+        this.report_selected_sentences = {};
+        this.num_custom = 0;
     }
     disableVis(){
         d3.selectAll(".column")
@@ -92,6 +93,10 @@ class State {
           .attr("value", "default")
           .html(default_option)
           .attr("disabled", true);
+        tag_selector.append("option")
+          .attr("value", "custom")
+          .attr("id", "custom")
+          .html("Custom option: \"\"");
         tag_selector.selectAll(".tags")
           .data(this.query_keys)
           .enter()
@@ -99,6 +104,16 @@ class State {
             .attr("value", function(d) { return d; })
             .html(function(d) { return d + ": " + queries[d]; });
         $("#"+tag_selector.attr("id")).selectpicker('refresh');
+        $("#"+tag_selector.attr("id")+" ~ div.dropdown-menu:first > div.bs-searchbox > input").on("input", function() {
+          var text = $(this).val();
+          if (text != tag_selector.select("#custom").attr("query")) {
+              console.log(text);
+              tag_selector.select("#custom")
+                .attr("query", text)
+                .html("Custom option: \""+text+"\"");
+              $("#"+tag_selector.attr("id")).selectpicker('refresh');
+              $(this).trigger("input");
+          }});
     }
 }
 
@@ -197,7 +212,6 @@ function showAllSummaries() {
 }
 
 function populateReportSelector() {
-    state.report_idxs = {};
     d3.select("#report")
       .selectAll("option")
       .data(current_result.original_reports)
@@ -353,7 +367,7 @@ function displaySentenceTags(i) {
         .attr("sentence", function(d) { return d[0]; })
         .html(function(d) { console.log(d);return d[1] + ": " + queries[d[1]]; })
         .on("click", function(d) {
-          document.getElementById("tag").selectedIndex = state.query_indices[d[1]] + 1;
+          document.getElementById("tag").selectedIndex = state.query_indices[d[1]] + 2;
           displayTag(); });
     state.populateTagSelector(d3.select("#sentence_tag"), "Add a Tag to this Sentence");
 }
