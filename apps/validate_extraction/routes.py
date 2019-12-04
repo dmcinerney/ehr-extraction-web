@@ -41,6 +41,7 @@ def annotate():
 @app.route('/query', methods=['POST'])
 def query_article():
     query = request.form['query']
+    is_nl = request.form['is_nl'] == 'true'
     if startup["file"] is None:
         f = request.files['article']
         filename = 'uploads/' + secure_filename(f.filename)
@@ -50,12 +51,11 @@ def query_article():
     else:
         raise Exception
     reports = pd.read_csv(filename, parse_dates=['date'])
-    results = startup['interface'].query_reports(reports, query)
+    results = startup['interface'].query_reports(reports, query, is_nl=is_nl)
     results['original_reports'] = [(i,report.report_type,str(report.date),report.text) for i,report in results['original_reports'].iterrows()]
     threshold = .5
     extracted = {k:[i for i,sent in enumerate(results['tokenized_text'][:len(results['heatmaps'][k])]) if sum(results['heatmaps'][k][i]) > threshold] for k in results['heatmaps'].keys()}
     results['extracted'] = extracted
     if 'score' in results.keys():
         print(results['score'])
-    print(results['extracted'])
     return results

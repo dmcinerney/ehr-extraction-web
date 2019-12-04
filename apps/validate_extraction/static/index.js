@@ -36,6 +36,10 @@ class State {
           .attr("value", "default")
           .html(default_option)
           .attr("disabled", true);
+        tag_selector.append("option")
+          .attr("value", "custom")
+          .attr("id", "custom")
+          .html("Custom option: \"\"");
         tag_selector.selectAll(".tags")
           .data(this.query_keys)
           .enter()
@@ -43,6 +47,15 @@ class State {
             .attr("value", function(d) { return d; })
             .html(function(d) { return d + ": " + queries[d]; });
         $("#"+tag_selector.attr("id")).selectpicker('refresh');
+        $("#"+tag_selector.attr("id")+" ~ div.dropdown-menu:first > div.bs-searchbox > input").on("input", function() {
+          var text = $(this).val();
+          if (text != tag_selector.select("#custom").attr("query")) {
+              tag_selector.select("#custom")
+                .attr("query", text)
+                .html("Custom option: \""+text+"\"");
+              $("#"+tag_selector.attr("id")).selectpicker('refresh');
+              $(this).trigger("input");
+          }});
     }
 }
 
@@ -273,7 +286,13 @@ function chooseQuery() {
     var tag_selector = document.getElementById("tag");
     var tag = tag_selector.options[tag_selector.selectedIndex].value;
     if (tag == 'default') { alert("no query selected"); return; }
-    formData.append("query", tag);
+    var is_nl = tag == 'custom';
+    formData.append("is_nl", is_nl);
+    if (is_nl) {
+        formData.append("query", d3.select("#custom").attr("query"));
+    } else {
+        formData.append("query", tag);
+    }
     if (!file_from_server) {
         var x = document.getElementById("reports_file");
         formData.append("reports", x.files[0]);
@@ -305,8 +324,6 @@ function displayModelAnnotations() {
       .style("background-color", function(d){
         if (d[1][0] > current_result.heatmaps[heatmap].length-1) { return "lightgrey";}
         var sentence_attention = current_result.heatmaps[heatmap][d[1][0]];
-        console.log(sentence_attention);
-        console.log(d[1][0]);
         return toColor(arrSum(sentence_attention), greenhue); })
       .classed("selected", function(d) { return state.tag_sentences[tag].has(d[1][0]); })
 }

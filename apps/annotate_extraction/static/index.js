@@ -19,7 +19,7 @@ class State {
         this.populateTagSelector(d3.select("#tag"));
         this.selected_sentence = null;
         this.report_selected_sentences = {};
-        this.num_custom = 0;
+        this.custom_queries = {};
     }
     disableVis(){
         d3.selectAll(".column")
@@ -107,7 +107,6 @@ class State {
         $("#"+tag_selector.attr("id")+" ~ div.dropdown-menu:first > div.bs-searchbox > input").on("input", function() {
           var text = $(this).val();
           if (text != tag_selector.select("#custom").attr("query")) {
-              console.log(text);
               tag_selector.select("#custom")
                 .attr("query", text)
                 .html("Custom option: \""+text+"\"");
@@ -125,7 +124,6 @@ function boldReports() {
 }
 
 function boldTags() {
-    console.log("bolding tags");
     d3.select("#tag").selectAll("option").classed("bold_option", function(){
       tag = d3.select(this).attr("value");
       if (tag == "default") {
@@ -365,7 +363,7 @@ function displaySentenceTags(i) {
         .attr("id", function(d) { return "sentence_tag_"+d[0]+"_"+d[1]; })
         .attr("tag", function(d) { return d[1]; })
         .attr("sentence", function(d) { return d[0]; })
-        .html(function(d) { console.log(d);return d[1] + ": " + queries[d[1]]; })
+        .html(function(d) { return d[1] + ": " + queries[d[1]]; })
         .on("click", function(d) {
           document.getElementById("tag").selectedIndex = state.query_indices[d[1]] + 2;
           displayTag(); });
