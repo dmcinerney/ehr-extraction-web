@@ -12,14 +12,12 @@ class State {
         this.tag_sentences = {};
         this.sentence_tags = {};
         this.switchToTagSentences();
-        this.query_keys = Object.keys(queries);
-        var query_indices = {};
-        this.query_keys.forEach(function(e, i) { query_indices[e] = i; } );
-        this.query_indices = query_indices;
+        this.descriptions = queries;
+        this.tags = Object.keys(queries);
+        this.num_custom = 0;
         this.populateTagSelector(d3.select("#tag"));
         this.selected_sentence = null;
         this.report_selected_sentences = {};
-        this.custom_queries = {};
     }
     disableVis(){
         d3.selectAll(".column")
@@ -87,7 +85,7 @@ class State {
         boldTags();
         boldReports();
     }
-    populateTagSelector(tag_selector, default_option="Select a Tag") {
+    populateTagSelector(tag_selector, default_option="Select a Tag", disabled=new Set([])) {
         tag_selector.html("");
         tag_selector.append("option")
           .attr("value", "default")
@@ -95,24 +93,39 @@ class State {
           .attr("disabled", true);
         tag_selector.append("option")
           .attr("value", "custom")
-          .attr("id", "custom")
-          .html("Custom option: \"\"");
+          .attr("description", "")
+          .attr("index", 1)
+          .attr("id", tag_selector.attr("id")+"_option_custom")
+          .html("Add a Custom Tag: \"\"");
+        var temp_descriptions = this.descriptions
         tag_selector.selectAll(".tags")
-          .data(this.query_keys)
+          .data(this.tags)
           .enter()
           .append("option")
             .attr("value", function(d) { return d; })
-            .html(function(d) { return d + ": " + queries[d]; });
+            .attr("description", function(d) { return temp_descriptions[d]; })
+            .attr("index", function(d, i) { return i+2; })
+            .attr("id", function(d) { return tag_selector.attr("id")+"_option_"+d; })
+            .html(function(d) { return d + ": " + temp_descriptions[d]; });
         $("#"+tag_selector.attr("id")).selectpicker('refresh');
         $("#"+tag_selector.attr("id")+" ~ div.dropdown-menu:first > div.bs-searchbox > input").on("input", function() {
           var text = $(this).val();
-          if (text != tag_selector.select("#custom").attr("query")) {
-              tag_selector.select("#custom")
-                .attr("query", text)
-                .html("Custom option: \""+text+"\"");
+          if (text != tag_selector.select("#"+tag_selector.attr("id")+"_option_custom").attr("description")) {
+              tag_selector.select("#"+tag_selector.attr("id")+"_option_custom")
+                .attr("description", text)
+                .html("Add a Custom Tag: \""+text+"\"");
               $("#"+tag_selector.attr("id")).selectpicker('refresh');
               $(this).trigger("input");
           }});
+    }
+    addCustomTag(description) {
+        this.num_custom = this.num_custom + 1;
+        var tagname = 'custom'+this.num_custom;
+        if (tagname in this.descriptions) { alert("error! server bug: no query can be named "+tagname) }
+        this.tags.unshift(tagname);
+        this.descriptions[tagname] = description
+        this.populateTagSelector(d3.select("#tag"));
+        this.populateTagSelector(d3.select("#sentence_tag"), "Add a Tag to this Sentence");
     }
 }
 
@@ -188,6 +201,13 @@ function displayTag() {
     state.switchToTagSentences();
     var tag_selector = document.getElementById("tag");
     var tag = tag_selector.options[tag_selector.selectedIndex].value;
+    if (tag == "custom") {
+        console.log(d3.select("#tag_option_custom"))
+        console.log(d3.select("#tag_option_custom").attr("description"))
+        state.addCustomTag(d3.select("#tag_option_custom").attr("description"));
+        tag_selector.selectedIndex = d3.select("#tag_option_custom"+state.num_custom).attr("index");
+        tag = "custom"+state.num_custom;
+    }
     d3.selectAll(".summary_p")
       .classed("selected", function(d) { return d == tag; });
     $("#tag").selectpicker('refresh');
@@ -196,6 +216,12 @@ function displayTag() {
 function addSentenceTag() {
     var tag_selector = document.getElementById("sentence_tag");
     var tag = tag_selector.options[tag_selector.selectedIndex].value;
+    if (tag == "custom") {
+        console.log(d3.select("#sentence_tag_option_custom"))
+        console.log(d3.select("#sentence_tag_option_custom").attr("description"))
+        state.addCustomTag(d3.select("#sentence_tag_option_custom").attr("description"));
+        tag = "custom"+state.num_custom;
+    }
     state.tagSentence(state.selected_sentence, tag);
     displaySentenceTags(state.selected_sentence);
     state.switchToSentenceTags();
@@ -313,7 +339,7 @@ function displayTokenizedSummary() {
         .attr("id", function(d) { return "tag_"+d; });
     summary_p.append("p")
       .attr("class", "tagheader")
-      .html(function(d) { return d + ": " + queries[d]; });
+      .html(function(d) { return d + ": " + state.descriptions[d]; });
     sentence_p = summary_p.selectAll(".summary_sentence")
       .data(function(d) { return Array.from(state.tag_sentences[d]).sort(sortNumber).map(function(e){ return [d, e]; }); })
       .enter()
@@ -363,9 +389,9 @@ function displaySentenceTags(i) {
         .attr("id", function(d) { return "sentence_tag_"+d[0]+"_"+d[1]; })
         .attr("tag", function(d) { return d[1]; })
         .attr("sentence", function(d) { return d[0]; })
-        .html(function(d) { return d[1] + ": " + queries[d[1]]; })
+        .html(function(d) { return d[1] + ": " + state.descriptions[d[1]]; })
         .on("click", function(d) {
-          document.getElementById("tag").selectedIndex = state.query_indices[d[1]] + 2;
+          document.getElementById("tag").selectedIndex = d3.select("#tag_option_"+d[1]).attr("index");
           displayTag(); });
     state.populateTagSelector(d3.select("#sentence_tag"), "Add a Tag to this Sentence");
 }

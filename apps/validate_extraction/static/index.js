@@ -9,12 +9,12 @@ $(document).ready(function(){
 
 class State {
     constructor() {
-        this.query_keys = Object.keys(queries);
-        var query_indices = {};
-        this.query_keys.forEach(function(e, i) { query_indices[e] = i; } );
-        this.query_indices = query_indices;
+        this.descriptions = queries;
+        this.tags = Object.keys(queries);
+        this.num_custom = 0;
         this.populateTagSelector(d3.select("#tag"));
         this.tag_sentences = {};
+        this.heatmap = 'sentence_level_attention';
     }
     disableVis(){
         d3.selectAll(".column")
@@ -30,7 +30,7 @@ class State {
           .classed("disabled", false);
         d3.select("#tag").classed("disabled", false);
     }
-    populateTagSelector(tag_selector, default_option="Select a Tag") {
+    populateTagSelector(tag_selector, default_option="Select a Tag", disabled=new Set([])) {
         tag_selector.html("");
         tag_selector.append("option")
           .attr("value", "default")
@@ -38,29 +38,43 @@ class State {
           .attr("disabled", true);
         tag_selector.append("option")
           .attr("value", "custom")
-          .attr("id", "custom")
-          .html("Custom option: \"\"");
+          .attr("description", "")
+          .attr("index", 1)
+          .attr("id", tag_selector.attr("id")+"_option_custom")
+          .html("Add a Custom Tag: \"\"");
+        var temp_descriptions = this.descriptions
         tag_selector.selectAll(".tags")
-          .data(this.query_keys)
+          .data(this.tags)
           .enter()
           .append("option")
             .attr("value", function(d) { return d; })
-            .html(function(d) { return d + ": " + queries[d]; });
+            .attr("description", function(d) { return temp_descriptions[d]; })
+            .attr("index", function(d, i) { return i+2; })
+            .attr("id", function(d) { return tag_selector.attr("id")+"_option_"+d; })
+            .html(function(d) { return d + ": " + temp_descriptions[d]; });
         $("#"+tag_selector.attr("id")).selectpicker('refresh');
         $("#"+tag_selector.attr("id")+" ~ div.dropdown-menu:first > div.bs-searchbox > input").on("input", function() {
           var text = $(this).val();
-          if (text != tag_selector.select("#custom").attr("query")) {
-              tag_selector.select("#custom")
-                .attr("query", text)
-                .html("Custom option: \""+text+"\"");
+          if (text != tag_selector.select("#"+tag_selector.attr("id")+"_option_custom").attr("description")) {
+              tag_selector.select("#"+tag_selector.attr("id")+"_option_custom")
+                .attr("description", text)
+                .html("Add a Custom Tag: \""+text+"\"");
               $("#"+tag_selector.attr("id")).selectpicker('refresh');
               $(this).trigger("input");
           }});
     }
+    addCustomTag(description) {
+        this.num_custom = this.num_custom + 1;
+        var tagname = 'custom'+this.num_custom;
+        if (tagname in this.descriptions) { alert("error! server bug: no query can be named "+tagname) }
+        this.tags.unshift(tagname);
+        this.descriptions[tagname] = description
+        this.populateTagSelector(d3.select("#tag"));
+    }
 }
 
 function sortNumber(a, b) {
-    return a - b;
+    return arrSum(current_result.heatmaps[state.heatmap][b]) - arrSum(current_result.heatmaps[state.heatmap][a]);
 }
 
 
@@ -108,9 +122,6 @@ function getFile() {
     });
 }
 
-function chooseTag() {
-    chooseQuery();
-}
 
 function populateReportSelector() {
     d3.select("#report")
@@ -211,7 +222,7 @@ function displayTokenizedSummary() {
         .attr("id", function(d) { return "tag_"+d; });
     summary_p.append("p")
       .attr("class", "tagheader")
-      .html(function(d) { return d + ": " + queries[d]; });
+      .html(function(d) { return d + ": " + d3.select("#tag_option_"+d).attr("description"); });
     sentence_p = summary_p.selectAll(".summary_sentence")
       .data(function(d) { return Array.from(state.tag_sentences[d]).sort(sortNumber).map(function(e){ return [d, e]; }); })
       .enter()
@@ -280,7 +291,7 @@ function submit() {
     });
 }
 
-function chooseQuery() {
+function chooseTag() {
     url = 'http://localhost:5000/query';
     var formData = new FormData();
     var tag_selector = document.getElementById("tag");
@@ -289,7 +300,12 @@ function chooseQuery() {
     var is_nl = tag == 'custom';
     formData.append("is_nl", is_nl);
     if (is_nl) {
-        formData.append("query", d3.select("#custom").attr("query"));
+        console.log(d3.select("#tag_option_custom"))
+        console.log(d3.select("#tag_option_custom").attr("description"))
+        state.addCustomTag(d3.select("#tag_option_custom").attr("description"));
+        tag_selector.selectedIndex = d3.select("#tag_option_custom"+state.num_custom).attr("index");
+        tag = "custom"+state.num_custom;
+        formData.append("query", d3.select("#tag_option_"+tag).attr("description"));
     } else {
         formData.append("query", tag);
     }
@@ -317,13 +333,12 @@ const arrSum = arr => arr.reduce((a,b) => a + b, 0);
 function displayModelAnnotations() {
     var tag_selector = document.getElementById("tag");
     var tag = tag_selector.options[tag_selector.selectedIndex].value;
-    var heatmap = 'sentence_level_attention';
     state.tag_sentences = {}
-    state.tag_sentences[tag] = new Set(current_result.extracted[heatmap]);
+    state.tag_sentences[tag] = new Set(current_result.extracted[state.heatmap]);
     d3.selectAll(".reports_sentence")
       .style("background-color", function(d){
-        if (d[1][0] > current_result.heatmaps[heatmap].length-1) { return "lightgrey";}
-        var sentence_attention = current_result.heatmaps[heatmap][d[1][0]];
+        if (d[1][0] > current_result.heatmaps[state.heatmap].length-1) { return "lightgrey"; }
+        var sentence_attention = current_result.heatmaps[state.heatmap][d[1][0]];
         return toColor(arrSum(sentence_attention), greenhue); })
       .classed("selected", function(d) { return state.tag_sentences[tag].has(d[1][0]); })
 }
