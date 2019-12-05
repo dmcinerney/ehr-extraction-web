@@ -36,7 +36,7 @@
         <text class="headertext">Reports</text>
       </div>
       <div id="summary_header_div" class="column box colheader">
-        <text class="headertext">Summary</text>
+        <text class="headertext">Tags</text>
       </div>
     </div>
     <div id="vis_div" class="row">
@@ -50,12 +50,21 @@
         <div class="custom_text">
         </div>
       </div>
-      <div id="summary_div" class="column box text colbody">
+      <div id="summary_div" class="column box colbody">
         <div class="buttons">
           <select id="tag" class="selectpicker" data-live-search="true" onchange="chooseTag()">
           </select>
+          <button id="next" class="btn btn-primary" onclick="showAllSummaries()">Show All</button>
         </div>
-        <div class="custom_text">
+        <div id="tag_sentences" class="custom_text">
+        </div>
+        <div id="sentence_tags">
+          <p id="sentenceheader"><b>Selected Sentence:</b> </p>
+          <div class="custom_text">
+            <p><b>Tags:</b></p>
+            <ul>
+            </ul>
+          </div>
         </div>
       </div>
     </div>

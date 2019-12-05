@@ -57,7 +57,7 @@ class State {
                 this.tag_sentences[tag].add(i);
                 var report = d3.select("#sentence_"+i).attr("report_id");
                 if (!(report in this.report_selected_sentences)) { this.report_selected_sentences[report] = new Set([]); }
-                this.report_selected_sentences[report].add(i);
+                this.report_selected_sentences[report].add(i+"_"+tag);
                 displayTokenizedSummary();
                 boldTags();
                 boldReports();
@@ -78,7 +78,7 @@ class State {
             delete this.tag_sentences[tag];
         }
         var report = d3.select("#sentence_"+i).attr("report_id");
-        this.report_selected_sentences[report].delete(i);
+        this.report_selected_sentences[report].delete(i+"_"+tag);
         if (this.report_selected_sentences[report].size == 0) {
             delete this.report_selected_sentences[report];
         }
@@ -130,9 +130,8 @@ class State {
 }
 
 function boldReports() {
-    var bold_reports = Object.keys(state.report_selected_sentences);
     d3.select("#report").selectAll("option").classed("bold_option", function(d, i){
-      return i in bold_reports; });
+      return i in state.report_selected_sentences; });
     $("#report").selectpicker('refresh');
 }
 

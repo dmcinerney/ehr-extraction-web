@@ -89,7 +89,6 @@ body {
     margin-left: 20px;
     display: flex;
     justify-content: space-between;
-    align-items: center;
     margin-right: 20px;
 }
 
@@ -104,13 +103,29 @@ body {
     color: white;
 }
 
+.sentence_tag:hover {
+    background-color: #017BFF;
+    color: white;
+}
+
 .reports_sentence {
     border: 2px;
     border-color:lightgrey;
     border-style:solid;
 }
+.reports_sentence:hover {
+    border: 2px;
+    border-color:grey;
+    border-style:solid;
+}
 
 .reports_sentence.selected {
+    border: 2px;
+    border-color: #73ACFF;
+    border-style:solid;
+}
+
+.reports_sentence.selected:hover {
     border: 2px;
     border-color: #017BFF;
     border-style:solid;
@@ -121,9 +136,32 @@ body {
 }
 
 .summary_p {
+    display: none;
+}
+
+#sentence_tags {
+    display: none;
+}
+
+#tag_sentences {
+    display: none;
 }
 
 .report_p.selected {
+    display: block;
+}
+
+.summary_p.selected {
+    display: block;
+}
+
+#sentence_tags.selected {
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+#tag_sentences.selected {
     display: block;
 }
 
@@ -155,4 +193,8 @@ body {
 
 #next {
     flex: 0 1 100px;
+}
+
+.bold_option {
+    font-weight: bold;
 }
