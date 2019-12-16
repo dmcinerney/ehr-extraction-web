@@ -1,0 +1,42 @@
+  <link rel="stylesheet" type="text/css" href="/static/annotate.css">
+  <body>
+    <div id="column_headers" class="row">
+      <div id="reports_header_div" class="column box colheader">
+        <text class="headertext">Reports</text>
+      </div>
+      <div id="summary_header_div" class="column box colheader">
+        <text class="headertext">Tags</text>
+      </div>
+    </div>
+    <div id="vis_div" class="row">
+      <div id="reports_div" class="column box colbody">
+        <div class="buttons">
+          <button id="previous" class="btn btn-primary">Previous</button>
+          <select id="report" class="selectpicker">
+          </select>
+          <button id="next" class="btn btn-primary">Next</button>
+        </div>
+        <div class="custom_text">
+        </div>
+      </div>
+      <div id="summary_div" class="column box colbody">
+        <div class="buttons">
+          <select id="tag" class="selectpicker" data-live-search="true">
+          </select>
+          <button id="show_all" class="btn btn-primary">Show All</button>
+        </div>
+        <div id="tag_sentences" class="custom_text">
+        </div>
+        <div id="sentence_tags">
+          <p id="sentenceheader"><b>Selected Sentence:</b> </p>
+          <div class="custom_text">
+            <p><b>Tags:</b></p>
+            <ul>
+            </ul>
+          </div>
+          <select id="sentence_tag" class="selectpicker" data-live-search="true">
+          </select>
+        </div>
+      </div>
+    </div>
+  </body>
