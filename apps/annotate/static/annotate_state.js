@@ -11,6 +11,13 @@ class AnnotateState {
         this.populateTagSelector(this.annotation_element.select("#tag"));
         this.selected_sentence = null;
         this.report_selected_sentences = {};
+        this.current_result = null;
+    }
+    initReports(current_result) {
+        this.current_result = current_result;
+        this.populateReportSelector();
+        this.makeReports();
+        this.chooseReport();
     }
     switchToTagSentences(){
         this.annotation_element.select("#tag_sentences").classed("selected", true);
@@ -115,7 +122,7 @@ class AnnotateState {
     populateReportSelector() {
         this.annotation_element.select("#report")
           .selectAll("option")
-          .data(current_result.original_reports)
+          .data(this.current_result.original_reports)
           .enter()
           .append("option")
             .attr("value", function(d) { return d[0]; })
@@ -126,17 +133,18 @@ class AnnotateState {
         var reports_text_div = this.annotation_element.select("#reports_div").select(".custom_text");
         reports_text_div.html("");
         var report_p = reports_text_div.selectAll("p")
-          .data(current_result.sentence_spans)
+          .data(this.current_result.sentence_spans)
           .enter()
           .append("p")
             .attr("class", "report_p");
-        console.log(current_result.sentence_spans);
+        console.log(this.current_result.sentence_spans);
         var divs_for_sentence_and_in_between = report_p.selectAll("div")
           .data(function(d, i) { return d.map(function(e){ return [i, e]; }); })
           .enter()
           .append("div")
             .style("display", "inline");
 
+        var temp_this = this;
         // Add anything in orginal report before the sentence
         divs_for_sentence_and_in_between
           .append("text")
@@ -144,13 +152,12 @@ class AnnotateState {
               if (i == 0) {
                   var start = 0;
               } else {
-                  var start = current_result.sentence_spans[d[0]][i-1][2];
+                  var start = temp_this.current_result.sentence_spans[d[0]][i-1][2];
               }
               var end = d[1][1];
-              return current_result.original_reports[d[0]][3].slice(start, end); });
+              return temp_this.current_result.original_reports[d[0]][3].slice(start, end); });
 
         // Add the sentence
-        var temp_this = this;
         divs_for_sentence_and_in_between
           .append("text")
             .attr("id", function(d) { return "sentence_"+d[1][0]; })
@@ -160,15 +167,15 @@ class AnnotateState {
             .attr("report_id", function(d) { return d[0]; })
             .on("click", function() { temp_this.selectSentence(d3.select(this)); })
             .html(function(d) {
-              return current_result.original_reports[d[0]][3].slice(d[1][1], d[1][2]); });
+              return temp_this.current_result.original_reports[d[0]][3].slice(d[1][1], d[1][2]); });
 
         // Add anything in original report after the last sentence
         report_p.append("div")
           .append("text")
           .html(function(d, i) {
-            var start = current_result.sentence_spans[i][current_result.sentence_spans[i].length-1][2];
-            var end = current_result.original_reports[i][3].length;
-            return current_result.original_reports[i][3].slice(start, end); });
+            var start = temp_this.current_result.sentence_spans[i][temp_this.current_result.sentence_spans[i].length-1][2];
+            var end = temp_this.current_result.original_reports[i][3].length;
+            return temp_this.current_result.original_reports[i][3].slice(start, end); });
     }
     selectSentence(sentence_text) {
         sentence_text.interrupt("highlightMomentarily");
@@ -181,12 +188,12 @@ class AnnotateState {
         this.annotation_element.select("#reports_div").select(".custom_text").selectAll(".report_p")
           .classed("selected", function(d, i) { return i == report; });
         this.annotation_element.select("#previous").classed("disabled", this.annotation_element.select("#report").node().selectedIndex == 0);
-        this.annotation_element.select("#next").classed("disabled", this.annotation_element.select("#report").node().selectedIndex == current_result.original_reports.length-1);
+        this.annotation_element.select("#next").classed("disabled", this.annotation_element.select("#report").node().selectedIndex == this.current_result.original_reports.length-1);
         $("#report", this.annotation_element.node()).selectpicker('refresh');
     }
     displaySentenceTags(i) {
         var sentence_tags = this.annotation_element.select("#sentence_tags");
-        var sentence_header = sentence_tags.select("#sentenceheader").selectAll("div").data(current_result.tokenized_text[i]);
+        var sentence_header = sentence_tags.select("#sentenceheader").selectAll("div").data(this.current_result.tokenized_text[i]);
         sentence_header.exit().remove();
         sentence_header.enter().append("div").style("display", "inline").each(this.displayTokenizedSentence);
         sentence_header.each(this.displayTokenizedSentence);
@@ -258,7 +265,7 @@ class AnnotateState {
             sentence.node().scrollIntoView({block: "center"});
             temp_this.highlightMomentarily(sentence); })
           .selectAll("div")
-          .data(function(d) { return current_result.tokenized_text[d[1]]; })
+          .data(function(d) { return temp_this.current_result.tokenized_text[d[1]]; })
           .enter()
           .append("div")
             .style("display", "inline")
@@ -275,6 +282,9 @@ class AnnotateState {
             var tag = d3.select(this.parentNode).attr("tag");
             temp_this.untagSentence(sentence_num, tag); })
           .html("<span aria-hidden=\"true\">&times;</span>");
+    }
+    chooseTag() {
+        this.displayTag();
     }
     displayTag() {
         this.switchToTagSentences();
@@ -314,7 +324,7 @@ class AnnotateState {
         this.annotation_element.select("#reports_div").select(".custom_text").selectAll(".report_p")
           .classed("selected", function(d, i) { return i == report; });
         this.annotation_element.select("#previous").classed("disabled", this.annotation_element.select("#report").node().selectedIndex == 0);
-        this.annotation_element.select("#next").classed("disabled", this.annotation_element.select("#report").node().selectedIndex == current_result.original_reports.length-1);
+        this.annotation_element.select("#next").classed("disabled", this.annotation_element.select("#report").node().selectedIndex == this.current_result.original_reports.length-1);
         $("#report", this.annotation_element.node()).selectpicker('refresh');
     }
     highlightMomentarily(selection) {
@@ -359,7 +369,7 @@ class AnnotateState {
         this.annotation_element.select("#previous").on("click", function(){ temp_this.previousReport(); })
         this.annotation_element.select("#report").on("change", function(){ temp_this.chooseReport(); })
         this.annotation_element.select("#next").on("click", function(){ temp_this.nextReport(); })
-        this.annotation_element.select("#tag").on("change", function(){ temp_this.displayTag(); });
+        this.annotation_element.select("#tag").on("change", function(){ temp_this.chooseTag(); });
         this.annotation_element.select("#show_all").on("click", function(){ temp_this.showAllSummaries(); });
         this.annotation_element.select("#sentence_tag").on("change", function(){ temp_this.addSentenceTag(); })
     }
@@ -368,9 +378,9 @@ class AnnotateState {
 
 class ValidateState extends AnnotateState {
     constructor(validation_element) {
+        super(validation_element);
         this.heatmap = "sentence_level_attention";
         this.cached_results = {};
-        super(validation_element);
     }
     selectSentence(sentence_text) {
         this.showAllSummaries();
@@ -410,7 +420,7 @@ class ValidateState extends AnnotateState {
                 formData.append("reports", x.files[0]);
             }
             displayLoader(d3.select("#loader_div"));
-            temp_this = this;
+            var temp_this = this;
             $.post({
                 url: url,
                 data: formData,
@@ -430,5 +440,43 @@ class ValidateState extends AnnotateState {
     arrSum(arr) {
         return arr.reduce((a,b) => a + b, 0);
     }
-    
+    tagAllSentences() {
+        var tag_selector = this.annotation_element.select("#tag").node();
+        var tag = tag_selector.options[tag_selector.selectedIndex].value;
+        var temp_this = this;
+        this.cached_results[tag].extracted[this.heatmap].forEach(function(i) { temp_this.tagSentence(i, tag); });
+        this.refreshSummary();
+    }
+    displayModelAnnotations() {
+        var tag_selector = this.annotation_element.select("#tag").node();
+        var tag = tag_selector.options[tag_selector.selectedIndex].value;
+        var temp_this = this;
+        this.annotation_element.selectAll(".reports_sentence")
+          .style("background-color", function(){
+            if (tag == 'default') { return "white"; }
+            var sentence_num = d3.select(this).attr("sentence");
+            if (sentence_num > temp_this.cached_results[tag].heatmaps[temp_this.heatmap].length-1) { return "lightgrey"; }
+            var sentence_attention = temp_this.cached_results[tag].heatmaps[temp_this.heatmap][sentence_num];
+            return toColor(temp_this.arrSum(sentence_attention), greenhue); })
+          .classed("selected", function() { return d3.select(this).attr("sentence") in temp_this.sentence_tags; })
+    }
+    displayTag() {
+        super.displayTag();
+        this.displayModelAnnotations();
+    }
+}
+
+// Note: taken from https://github.com/abisee/attn_vis/blob/master/index.html
+greenhue = 151
+yellowhue = 56
+function toColor(p, hue) {
+    // converts a scalar value p in [0,1] to a HSL color code string with base color hue
+    if (p<0 || p>1) {
+      throw sprintf("Error: p has value %.2f but should be in [0,1]", p)
+    }
+    var saturation = 100; // saturation percentage
+    p = 1-p; // invert so p=0 is light and p=1 is dark
+    var min_lightness = 50; // minimum percentage lightness, i.e. darkest possible color
+    var lightness = (min_lightness + p*(100-min_lightness)); // lightness is proportional to p
+    return sprintf('hsl(%d,%s%%,%s%%)', hue, saturation, lightness);
 }

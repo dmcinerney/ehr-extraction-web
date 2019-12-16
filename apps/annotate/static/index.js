@@ -5,21 +5,25 @@ $(document).ready(function(){
 });
 
 function onReady() {
-    d3.selectAll(".panel_vis").each(function(d){ states[d[0]] = new AnnotateState(d3.select(this)); });
+    d3.selectAll(".panel_vis").each(function(d){
+      if (d[3] == 'annotate') {
+          states[d[0]] = new AnnotateState(d3.select(this));
+      } else {
+          states[d[0]] = new ValidateState(d3.select(this));
+      }});
     if (file_from_server) {
         getFile();
     }
 }
 
-function onReportsLoaded() {
+function onReportsLoaded(tab_results) {
     d3.selectAll(".panel_vis")
       .each(function(d){
         var state = states[d[0]];
         console.log("populatingReportSelector");
         console.log(state);
-        state.populateReportSelector();
-        state.makeReports();
-        state.chooseReport(); });
+        console.log(d[4]);
+        state.initReports(tab_results[d[4]]); });
 }
 
 function populateTabs(){
@@ -61,7 +65,7 @@ function populateTabs(){
       .style("min-height", 0)
       .attr("id", function(d){ return d[0]+"-vis"; })
       .attr("class", "panel_vis")
-      .attr("w3-include-html", function(d){ return "/static/"+d[3]+".html"; });
+      .attr("w3-include-html", function(d){ return "/static/annotate.html"; });
 }
 
 // taken from https://www.w3schools.com/howto/howto_html_include.asp
@@ -106,9 +110,9 @@ function getFile() {
         url: url,
         data: formData,
         success: function(result, status){
-            current_result = result;
+            d3.select("#patient_mrn").html("Patient MRN: "+result["patient_mrn"]);
+            onReportsLoaded(result["tab_results"]);
             closeLoader(d3.select("#loader_div"));
-            onReportsLoaded();
         },
         processData: false,
         contentType: false,

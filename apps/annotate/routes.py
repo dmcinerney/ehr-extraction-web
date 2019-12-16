@@ -12,9 +12,9 @@ def index():
         file_from_server="false" if startup["file"] is None else "true",
         queries=startup['interface'].get_queries(),
         file=basename(startup["file"]) if startup["file"] else False,
-        tabs=[('future-reports', 'Future Reports', 'annotate the reports from the 12 month window after the first mr','annotate'),
-              ('past-reports', 'Past Reports', 'annotate the last (up to) 100 reports before the first mr', 'annotate'),]
-#              ('model-summaries', 'Model Summaries', 'validate the model summaries of the past reports', 'validate')]
+        tabs=[('future-reports', 'Future Reports', 'annotate the reports from the 12 month window after the first mr','annotate', 0),
+              ('past-reports', 'Past Reports', 'annotate the last (up to) 100 reports before the first mr', 'annotate', 0),
+              ('model-summaries', 'Model Summaries', 'validate the model summaries of the past reports', 'validate', 0)]
     )
 
 @app.route('/get_file', methods=['POST'])
@@ -30,8 +30,10 @@ def get_file():
     reports = pd.read_csv(filename, parse_dates=['date'])
     results = startup['interface'].tokenize(reports)
     results['original_reports'] = [(i,report.report_type,str(report.date),report.text) for i,report in results['original_reports'].iterrows()]
-    results['filename'] = basename(startup['file'])
-    return results
+    import pdb; pdb.set_trace()
+    tab_results = [results]
+    patient_mrn = str(reports["patient_id"].iloc[0])
+    return {"tab_results":tab_results, "patient_mrn":patient_mrn}
 
 @app.route('/', methods=['POST'])
 def annotate():

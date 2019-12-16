@@ -21,5 +21,5 @@ if __name__=='__main__':
     startup['file'] = next(startup['file_generator']) if args.data_dir is not None else args.file
     with directory(args.interface_dir):
         exec('import '+args.interface)
-    startup['interface'] = eval(args.interface).TokenizerInterface()
+    startup['interface'] = eval(args.interface).FullModelInterface()
     app.run(debug=True)
