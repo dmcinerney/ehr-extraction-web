@@ -3,6 +3,7 @@ from . import app, startup
 from flask import request, render_template, send_file, make_response
 from werkzeug import secure_filename
 import pandas as pd
+import pickle as pkl
 
 @app.route('/', methods=['GET'])
 def index():
@@ -12,7 +13,7 @@ def index():
         file_from_server="false" if startup["file"] is None else "true",
         queries=startup['interface'].get_queries(),
         file=basename(startup["file"]) if startup["file"] else False,
-        tabs=[('future-reports', 'Future Reports', 'annotate the reports from the 12 month window after the first mr','annotate', 0),
+        tabs=[('future-reports', 'Future Reports', 'annotate the reports from the 12 month window after the first mr','annotate', 1),
               ('past-reports', 'Past Reports', 'annotate the last (up to) 100 reports before the first mr', 'annotate', 0),
               ('model-summaries', 'Model Summaries', 'validate the model summaries of the past reports', 'validate', 0)]
     )
@@ -27,13 +28,20 @@ def get_file():
         filename = startup['file']
     else:
         raise Exception
-    reports = pd.read_csv(filename, parse_dates=['date'])
-    results = startup['interface'].tokenize(reports)
-    results['original_reports'] = [(i,report.report_type,str(report.date),report.text) for i,report in results['original_reports'].iterrows()]
-    import pdb; pdb.set_trace()
-    tab_results = [results]
+    with open(filename, 'rb') as f:
+        instance = pkl.load(f)
+    reports = pd.DataFrame(instance['reports'])
+    reports['date'] = pd.to_datetime(reports['date'])
+    results1 = startup['interface'].tokenize(reports)
+    results1['original_reports'] = [(i,report.report_type,str(report.date),report.text) for i,report in results1['original_reports'].iterrows()]
+    future_reports = pd.DataFrame(instance['future_reports'])
+    future_reports['date'] = pd.to_datetime(future_reports['date'])
+    results2 = startup['interface'].tokenize(future_reports)
+    results2['original_reports'] = [(i,report.report_type,str(report.date),report.text) for i,report in results2['original_reports'].iterrows()]
+    startup['tab_reports'] = [reports, future_reports]
+    startup['tab_results'] = [results1, results2]
     patient_mrn = str(reports["patient_id"].iloc[0])
-    return {"tab_results":tab_results, "patient_mrn":patient_mrn}
+    return {"tab_results":startup['tab_results'], "patient_mrn":patient_mrn}
 
 @app.route('/', methods=['POST'])
 def annotate():
@@ -52,16 +60,8 @@ def annotate():
 def query_article():
     query = request.form['query']
     is_nl = request.form['is_nl'] == 'true'
-    if startup["file"] is None:
-        f = request.files['article']
-        filename = 'uploads/' + secure_filename(f.filename)
-        f.save(filename)
-    elif isinstance(startup["file"], str):
-        filename = startup['file']
-    else:
-        raise Exception
-    reports = pd.read_csv(filename, parse_dates=['date'])
-    results = startup['interface'].query_reports(reports, query, is_nl=is_nl)
+    index = int(request.form['index'])
+    results = startup['interface'].query_reports(startup['tab_reports'][index], query, is_nl=is_nl)
     results['original_reports'] = [(i,report.report_type,str(report.date),report.text) for i,report in results['original_reports'].iterrows()]
     threshold = .5
     extracted = {k:[i for i,sent in enumerate(results['tokenized_text'][:len(results['heatmaps'][k])]) if sum(results['heatmaps'][k][i]) > threshold] for k in results['heatmaps'].keys()}

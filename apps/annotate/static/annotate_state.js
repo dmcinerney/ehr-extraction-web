@@ -406,6 +406,8 @@ class ValidateState extends AnnotateState {
         var tag = tag_selector.options[tag_selector.selectedIndex].value;
         var is_nl = tag == 'custom';
         formData.append("is_nl", is_nl);
+        console.log(this.annotation_element.datum()[4]);
+        formData.append("index", this.annotation_element.datum()[4]);
         if (is_nl) {
             this.addCustomTag(this.annotation_element.select("#tag_option_custom").attr("description"));
             tag_selector.selectedIndex = this.annotation_element.select("#tag_option_custom"+state.num_custom).attr("index");
