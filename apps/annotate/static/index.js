@@ -20,9 +20,6 @@ function onReportsLoaded(tab_results) {
     d3.selectAll(".panel_vis")
       .each(function(d){
         var state = states[d[0]];
-        console.log("populatingReportSelector");
-        console.log(state);
-        console.log(d[4]);
         state.initReports(tab_results[d[4]]); });
 }
 

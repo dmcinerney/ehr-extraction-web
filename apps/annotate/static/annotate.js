@@ -137,7 +137,6 @@ class State {
           .enter()
           .append("p")
             .attr("class", "report_p");
-        console.log(this.current_result.sentence_spans);
         var divs_for_sentence_and_in_between = report_p.selectAll("div")
           .data(function(d, i) { return d.map(function(e){ return [i, e]; }); })
           .enter()
@@ -297,7 +296,6 @@ class State {
         var tag_selector = this.annotation_element.select("#tag").node();
         var tag = tag_selector.options[tag_selector.selectedIndex].value;
         if (tag == "custom") {
-            console.log(this.annotation_element.select("#tag_option_custom").node());
             this.addCustomTag(this.annotation_element.select("#tag_option_custom").attr("description"));
             tag_selector.selectedIndex = this.annotation_element.select("#tag_option_custom"+this.num_custom).attr("index");
             tag = "custom"+this.num_custom;
@@ -456,7 +454,6 @@ class ValidateState extends State {
         var tag = tag_selector.options[tag_selector.selectedIndex].value;
         var is_nl = tag == 'custom';
         formData.append("is_nl", is_nl);
-        console.log(this.annotation_element.datum()[4]);
         formData.append("index", this.annotation_element.datum()[4]);
         if (is_nl) {
             this.addCustomTag(this.annotation_element.select("#tag_option_custom").attr("description"));
