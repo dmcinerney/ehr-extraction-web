@@ -95,6 +95,7 @@ body {
 .summary_sentence_text {
     border: 2px;
     border-color: white;
+    border-style: solid;
     margin-right: 20px;
 }
 
@@ -110,8 +111,6 @@ body {
 }
 
 .sentence_tag_text {
-    border: 2px;
-    border-color: white;
     margin-right: 20px;
 }
 
@@ -211,4 +210,10 @@ body {
 
 .bold_option {
     font-weight: bold;
+}
+
+.senttag_type_header {
+    text-align: center;
+    background-color: #eaeaea;
+    border-radius: 10px;
 }
