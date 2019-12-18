@@ -103,7 +103,19 @@ body {
     color: white;
 }
 
-.sentence_tag:hover {
+.sentence_tag {
+    display: flex;
+    justify-content: space-between;
+    margin-right: 20px;
+}
+
+.sentence_tag_text {
+    border: 2px;
+    border-color: white;
+    margin-right: 20px;
+}
+
+.sentence_tag_text:hover {
     background-color: #017BFF;
     color: white;
 }
@@ -162,7 +174,9 @@ body {
 }
 
 #tag_sentences.selected {
-    display: block;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
 }
 
 #tag {

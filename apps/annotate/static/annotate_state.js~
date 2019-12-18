@@ -1,4 +1,4 @@
-class State {
+class AnnotateState {
     constructor(annotation_element) {
         this.annotation_element = annotation_element;
         this.addOnClicks();
@@ -52,11 +52,11 @@ class State {
     }
     refreshSummary() {
         this.displayTokenizedSummary();
-        if (this.selected_sentence) { this.displaySentenceTags(this.selected_sentence); }
         this.boldTags();
         this.boldReports();
     }
-    untagSentence(i, tag, refresh=true) {
+    untagSentence(i, tag) {
+        this.annotation_element.select("#summary_sentence_"+tag+"_"+i).remove();
         this.sentence_tags[i].delete(tag);
         if (this.sentence_tags[i].size == 0) {
             this.annotation_element.select("#sentence_"+i).classed("selected", false);
@@ -73,9 +73,8 @@ class State {
         if (this.report_selected_sentences[report].size == 0) {
             delete this.report_selected_sentences[report];
         }
-        if (refresh) {
-             this.refreshSummary();
-        }
+        this.boldTags();
+        this.boldReports();
     }
     populateTagSelector(tag_selector, default_option="Select a Tag", disabled=new Set([])) {
         tag_selector.html("");
@@ -118,6 +117,7 @@ class State {
         this.tags.unshift(tagname);
         this.descriptions[tagname] = description
         this.populateTagSelector(this.annotation_element.select("#tag"));
+        this.populateTagSelector(this.annotation_element.select("#sentence_tag"), "Add a Tag to this Sentence");
     }
     populateReportSelector() {
         this.annotation_element.select("#report")
@@ -199,7 +199,7 @@ class State {
         sentence_header.each(this.displayTokenizedSentence);
         var sentence_tags_list = sentence_tags.select(".custom_text").select("ul").html("");
         var temp_this = this;
-        var list_item = sentence_tags_list.selectAll("li")
+        sentence_tags_list.selectAll("li")
           .data(function(){
             if (temp_this.sentence_tags[i] != null) {
                 return Array.from(temp_this.sentence_tags[i]).map(function(e){ return [i, e]; })
@@ -211,15 +211,13 @@ class State {
             .attr("class", "sentence_tag")
             .attr("id", function(d) { return "sentence_tag_"+d[0]+"_"+d[1]; })
             .attr("tag", function(d) { return d[1]; })
-            .attr("sentence", function(d) { return d[0]; });
-        list_item.append("text")
-          .attr("class", "sentence_tag_text")
-          .html(function(d) { return d[1] + ": " + temp_this.descriptions[d[1]]; })
-          .on("click", function() {
-            var tag = d3.select(this.parentNode).attr("tag");
-            temp_this.annotation_element.select("#tag").node().selectedIndex = temp_this.annotation_element.select("#tag_option_"+tag).attr("index");
-            temp_this.chooseTag(); });
-        this.addAnnotationButton(list_item);
+            .attr("sentence", function(d) { return d[0]; })
+            .html(function(d) { return d[1] + ": " + temp_this.descriptions[d[1]]; })
+            .on("click", function() {
+              var tag = d3.select(this).attr("tag");
+              temp_this.annotation_element.select("#tag").node().selectedIndex = temp_this.annotation_element.select("#tag_option_"+tag).attr("index");
+              temp_this.displayTag(); });
+        this.populateTagSelector(this.annotation_element.select("#sentence_tag"), "Add a Tag to this Sentence");
     }
     displayTokenizedSentence(d, i) {
         d3.select(this).html("");
@@ -250,7 +248,7 @@ class State {
           .attr("class", "tagheader")
           .html(function(d) { return d + ": " + temp_this.descriptions[d]; });
         var sentence_p = summary_p.selectAll(".summary_sentence")
-          .data(function(d) { return Array.from(temp_this.tag_sentences[d]).sort(function(a,b){return temp_this.sortNumber(a, b);}).map(function(e){ return [d, e]; }); })
+          .data(function(d) { return Array.from(temp_this.tag_sentences[d]).sort(temp_this.sortNumber).map(function(e){ return [d, e]; }); })
           .enter()
           .append("p")
             .attr("class", "summary_sentence")
@@ -275,9 +273,9 @@ class State {
         this.addAnnotationButton(sentence_p);
         this.displayTag();
     }
-    addAnnotationButton(senttag_container) {
+    addAnnotationButton(sentence_p) {
         var temp_this = this;
-        senttag_container.append("button")
+        sentence_p.append("button")
           .attr("class", "btn btn-outline-danger btn-sm")
           .on("click", function(){
             var sentence_num = d3.select(this.parentNode).attr("sentence");
@@ -287,9 +285,9 @@ class State {
     }
     chooseTag() {
         this.displayTag();
-        this.switchToTagSentences();
     }
     displayTag() {
+        this.switchToTagSentences();
         var tag_selector = this.annotation_element.select("#tag").node();
         var tag = tag_selector.options[tag_selector.selectedIndex].value;
         if (tag == "custom") {
@@ -297,13 +295,8 @@ class State {
             tag_selector.selectedIndex = this.annotation_element.select("#tag_option_custom"+this.num_custom).attr("index");
             tag = "custom"+this.num_custom;
         }
-        if (tag == "default") {
-            this.annotation_element.selectAll(".summary_p")
-              .classed("selected", true);
-        } else {
-            this.annotation_element.selectAll(".summary_p")
-              .classed("selected", function() { return d3.select(this).attr("tag") == tag; });
-        }
+        this.annotation_element.selectAll(".summary_p")
+          .classed("selected", function() { return d3.select(this).attr("tag") == tag; });
         $("#tag", this.annotation_element.node()).selectpicker('refresh');
     }
     sortNumber(a, b) {
@@ -353,31 +346,6 @@ class State {
         this.annotation_element.select("#report").node().selectedIndex = this.annotation_element.select("#report").node().selectedIndex-1;
         this.chooseReport();
     }
-    showAllSummaries() {
-        this.switchToTagSentences();
-        this.annotation_element.select("#tag").node().selectedIndex = 0;
-        this.displayTag();
-    }
-    addOnClicks() {
-        var temp_this = this;
-        this.annotation_element.select("#previous").on("click", function(){ temp_this.previousReport(); })
-        this.annotation_element.select("#report").on("change", function(){ temp_this.chooseReport(); })
-        this.annotation_element.select("#next").on("click", function(){ temp_this.nextReport(); })
-        this.annotation_element.select("#tag").on("change", function(){ temp_this.chooseTag(); });
-        this.annotation_element.select("#show_all").on("click", function(){ temp_this.showAllSummaries(); });
-    }
-}
-
-class AnnotateState extends State{
-    constructor(annotation_element) {
-        super(annotation_element);
-        var temp_this = this;
-        this.annotation_element.select("#sentence_tags").append("select")
-          .attr("class", "selectpicker")
-          .attr("data-life-search", "true")
-          .attr("id", "sentence_tag")
-          .on("change", function(){ temp_this.addSentenceTag(); });
-    }
     addSentenceTag() {
         var tag_selector = this.annotation_element.select("#sentence_tag").node();
         var tag = tag_selector.options[tag_selector.selectedIndex].value;
@@ -389,23 +357,30 @@ class AnnotateState extends State{
         this.displaySentenceTags(this.selected_sentence);
         this.switchToSentenceTags();
     }
-    displaySentenceTags(i) {
-        super.displaySentenceTags(i);
-        this.populateTagSelector(this.annotation_element.select("#sentence_tag"), "Add a Tag to this Sentence");
+    showAllSummaries() {
+        this.switchToTagSentences();
+        this.annotation_element.select("#summary_div").select(".custom_text").selectAll(".summary_p")
+          .classed("selected", true);
+        this.annotation_element.select("#tag").node().selectedIndex = 0;
+        $("#tag", this.annotation_element.node()).selectpicker('refresh');
     }
-    addCustomTag() {
-        super.addCustomTag();
-        this.populateTagSelector(this.annotation_element.select("#sentence_tag"), "Add a Tag to this Sentence");
+    addOnClicks() {
+        var temp_this = this;
+        this.annotation_element.select("#previous").on("click", function(){ temp_this.previousReport(); })
+        this.annotation_element.select("#report").on("change", function(){ temp_this.chooseReport(); })
+        this.annotation_element.select("#next").on("click", function(){ temp_this.nextReport(); })
+        this.annotation_element.select("#tag").on("change", function(){ temp_this.chooseTag(); });
+        this.annotation_element.select("#show_all").on("click", function(){ temp_this.showAllSummaries(); });
+        this.annotation_element.select("#sentence_tag").on("change", function(){ temp_this.addSentenceTag(); })
     }
 }
 
 
-class ValidateState extends State {
+class ValidateState extends AnnotateState {
     constructor(validation_element) {
         super(validation_element);
         this.heatmap = "sentence_level_attention";
         this.cached_results = {};
-        this.checked_senttags = {};
     }
     selectSentence(sentence_text) {
         this.showAllSummaries();
@@ -413,28 +388,13 @@ class ValidateState extends State {
         this.switchToSentenceTags();
         this.displaySentenceTags(sentence_text.attr("sentence"));
     }
-    addAnnotationButton(senttag_container) {
-        var checkbox_container = senttag_container.append("div")
+    addAnnotationButton(sentence_p) {
+        var checkbox_container = sentence_p.append("div")
           .attr("class", "custom-control custom-checkbox form-control-lg");
-        var temp_this = this;
         checkbox_container.append("input")
           .attr("type", "checkbox")
           .attr("class", "custom-control-input")
-          .attr("id", function(d) { return "checkbox_"+d[0]+"_"+d[1]; })
-          .each(function(d, i){
-            var sentence_num = d3.select(this.parentNode.parentNode).attr("sentence");
-            var tag = d3.select(this.parentNode.parentNode).attr("tag");
-            var senttag = sentence_num+"_"+tag;
-            if (senttag in temp_this.checked_senttags) {
-                d3.select(this).node().checked = temp_this.checked_senttags[senttag];
-            } else {
-                d3.select(this).node().checked = false;
-            }})
-          .on("change", function(){
-            var sentence_num = d3.select(this.parentNode.parentNode).attr("sentence");
-            var tag = d3.select(this.parentNode.parentNode).attr("tag");
-            var senttag = sentence_num+"_"+tag;
-            temp_this.checked_senttags[senttag] = d3.select(this).node().checked; });
+          .attr("id", function(d) { return "checkbox_"+d[0]+"_"+d[1]; });
         checkbox_container.append("label")
           .attr("class", "custom-control-label")
           .attr("for", function(d) { return "checkbox_"+d[0]+"_"+d[1]; });
@@ -470,14 +430,13 @@ class ValidateState extends State {
                     temp_this.cached_results[tag] = result;
                     temp_this.tagAllSentences();
                     temp_this.displayTag();
-                    temp_this.switchToTagSentences();
                     closeLoader(d3.select("#loader_div"));
                 },
                 processData: false,
                 contentType: false,
             });
         } else {
-            super.chooseTag();
+            this.displayTag();
         }
     }
     arrSum(arr) {
@@ -487,7 +446,7 @@ class ValidateState extends State {
         var tag_selector = this.annotation_element.select("#tag").node();
         var tag = tag_selector.options[tag_selector.selectedIndex].value;
         var temp_this = this;
-        this.cached_results[tag].extracted[this.heatmap].forEach(function(i) { temp_this.tagSentence(i, tag, false); });
+        this.cached_results[tag].extracted[this.heatmap].forEach(function(i) { temp_this.tagSentence(i, tag); });
         this.refreshSummary();
     }
     displayModelAnnotations() {
@@ -506,11 +465,6 @@ class ValidateState extends State {
     displayTag() {
         super.displayTag();
         this.displayModelAnnotations();
-    }
-    sortNumber(a, b) {
-        var tag_selector = this.annotation_element.select("#tag").node();
-        var tag = tag_selector.options[tag_selector.selectedIndex].value;
-        return this.arrSum(this.cached_results[tag].heatmaps[this.heatmap][b]) - this.arrSum(this.cached_results[tag].heatmaps[this.heatmap][a]);
     }
 }
 
