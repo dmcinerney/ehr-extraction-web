@@ -25,6 +25,14 @@ body {
     min-height: 0;
 }
 
+.validate-tab {
+    color: green !important;
+}
+
+.annotate-tab {
+    color: blue !important;
+}
+
 /* LOADER */
 .loader {
     border: 16px solid #f3f3f3;

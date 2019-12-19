@@ -4,18 +4,29 @@ from flask import request, render_template, send_file, make_response
 from werkzeug import secure_filename
 import pandas as pd
 import pickle as pkl
+import random
 
 @app.route('/', methods=['GET'])
 def index():
     print(startup['file'])
+    tabs = [
+        ('future-reports', 'Future Reports', 'annotate the reports from the 12 month window after the first mr','annotate', 1),
+        ('past-reports', 'Past Reports', 'annotate the last (up to) 100 reports before the first mr', 'annotate', 0),
+    ]
+    models = startup['interface'].get_models()
+    random.shuffle(models)
+    print(models)
+    startup['curr_models'] = {}
+    for i,k in enumerate(models):
+        tabs.append(('model-%i-summaries' % (i+1), 'Model %i Summaries' % (i+1), 'validate the model summaries of the past reports', 'validate', 0))
+        startup['curr_models']['model-%i-summaries' % (i+1)] = k
+
     return render_template(
         'index.html',
         file_from_server="false" if startup["file"] is None else "true",
         queries=startup['interface'].get_queries(),
         file=basename(startup["file"]) if startup["file"] else False,
-        tabs=[('future-reports', 'Future Reports', 'annotate the reports from the 12 month window after the first mr','annotate', 1),
-              ('past-reports', 'Past Reports', 'annotate the last (up to) 100 reports before the first mr', 'annotate', 0),
-              ('model-summaries', 'Model Summaries', 'validate the model summaries of the past reports', 'validate', 0)]
+        tabs=tabs,
     )
 
 @app.route('/get_file', methods=['POST'])
@@ -61,7 +72,9 @@ def query_article():
     query = request.form['query']
     is_nl = request.form['is_nl'] == 'true'
     index = int(request.form['index'])
-    results = startup['interface'].query_reports(startup['tab_reports'][index], query, is_nl=is_nl)
+    model = startup['curr_models'][request.form['model']]
+    print(model)
+    results = startup['interface'].query_reports(startup['tab_reports'][index], query, is_nl=is_nl, model=model)
     results['original_reports'] = [(i,report.report_type,str(report.date),report.text) for i,report in results['original_reports'].iterrows()]
     threshold = .5
     extracted = {k:[i for i,sent in enumerate(results['tokenized_text'][:len(results['heatmaps'][k])]) if sum(results['heatmaps'][k][i]) > threshold] for k in results['heatmaps'].keys()}
