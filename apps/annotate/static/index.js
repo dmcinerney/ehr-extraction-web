@@ -30,7 +30,7 @@ function populateTabs(){
       .enter()
       .append("li")
         .append("a")
-          .attr("class", function(d){ return "nav-link "+d[3]+"-tab"; })
+          .attr("class", function(d){ return "nav-item nav-link "+d[3]+"-tab"; })
           .classed("active", function(d, i){ return i == 0; })
           .attr("id", function(d){ return d[0]+"-tab"; })
           .attr("data-toggle", "tab")
