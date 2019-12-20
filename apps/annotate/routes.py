@@ -41,7 +41,7 @@ def get_file():
         raise Exception
     with open(filename, 'rb') as f:
         instance = pkl.load(f)
-    reports = pd.DataFrame(instance['reports'])
+    reports = pd.DataFrame(eval(instance['reports']))
     reports['date'] = pd.to_datetime(reports['date'])
     results1 = startup['interface'].tokenize(reports)
     results1['original_reports'] = [(i,report.report_type,str(report.date),report.text) for i,report in results1['original_reports'].iterrows()]
