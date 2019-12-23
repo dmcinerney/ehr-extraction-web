@@ -18,7 +18,8 @@ def index():
     print(models)
     startup['curr_models'] = {}
     for i,k in enumerate(models):
-        tabs.append(('model-%i-summaries' % (i+1), 'Model %i Summaries' % (i+1), 'validate the model summaries of the past reports', 'validate', 0))
+        queries = startup['interface'].get_queries(model=k)
+        tabs.append(('model-%i-summaries' % (i+1), 'Model %i Summaries' % (i+1), 'validate the model summaries of the past reports', 'validate', 0, queries))
         startup['curr_models']['model-%i-summaries' % (i+1)] = k
 
     return render_template(
