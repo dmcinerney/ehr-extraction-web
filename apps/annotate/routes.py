@@ -10,23 +10,31 @@ import random
 def index():
     print(startup['file'])
     tabs = [
-        ('future-reports', 'Future Reports', 'annotate the reports from the 12 month window after the first mr','annotate', 1),
-        ('past-reports', 'Past Reports', 'annotate the last (up to) 100 reports before the first mr', 'annotate', 0),
+        ('future-reports', 'Future Reports', 'annotate the reports from the 12 month window after the first mr','annotate', 1, None, True),
+        ('past-reports', 'Past Reports', 'annotate the last (up to) 100 reports before the first mr', 'annotate', 0, None, True),
     ]
     models = startup['interface'].get_models()
     random.shuffle(models)
     print(models)
     startup['curr_models'] = {}
     for i,k in enumerate(models):
-        queries = startup['interface'].get_queries(model=k)
-        tabs.append(('model-%i-summaries' % (i+1), 'Model %i Summaries' % (i+1), 'validate the model summaries of the past reports', 'validate', 0, queries))
+        valid_queries = startup['interface'].get_valid_queries(k)
+        with_custom = startup['interface'].with_custom(k)
+        tabs.append(('model-%i-summaries' % (i+1), 'Model %i Summaries' % (i+1), 'validate the model summaries of the past reports', 'validate', 0, valid_queries, with_custom))
         startup['curr_models']['model-%i-summaries' % (i+1)] = k
-
+    progress = startup['file_generator'].progress()
+    num_instances = len(startup['file_generator'])
+    file_from_server = "false" if startup["file"] is None else "true"
+    descriptions = startup['interface'].get_descriptions()
+    file = basename(startup["file"]) if startup["file"] else False
+    tabs = tabs
     return render_template(
         'index.html',
-        file_from_server="false" if startup["file"] is None else "true",
-        queries=startup['interface'].get_queries(),
-        file=basename(startup["file"]) if startup["file"] else False,
+        progress=progress,
+        num_instances=num_instances,
+        file_from_server=file_from_server,
+        descriptions=descriptions,
+        file=file,
         tabs=tabs,
     )
 
@@ -46,7 +54,7 @@ def get_file():
     reports['date'] = pd.to_datetime(reports['date'])
     results1 = startup['interface'].tokenize(reports)
     results1['original_reports'] = [(i,report.report_type,str(report.date),report.text) for i,report in results1['original_reports'].iterrows()]
-    future_reports = pd.DataFrame(instance['future_reports'])
+    future_reports = pd.DataFrame(eval(instance['future_reports']))
     future_reports['date'] = pd.to_datetime(future_reports['date'])
     results2 = startup['interface'].tokenize(future_reports)
     results2['original_reports'] = [(i,report.report_type,str(report.date),report.text) for i,report in results2['original_reports'].iterrows()]
@@ -75,7 +83,7 @@ def query_article():
     index = int(request.form['index'])
     model = startup['curr_models'][request.form['model']]
     print(model)
-    results = startup['interface'].query_reports(startup['tab_reports'][index], query, is_nl=is_nl, model=model)
+    results = startup['interface'].query_reports(model, startup['tab_reports'][index], query, is_nl=is_nl)
     results['original_reports'] = [(i,report.report_type,str(report.date),report.text) for i,report in results['original_reports'].iterrows()]
     threshold = .5
     extracted = {k:[i for i,sent in enumerate(results['tokenized_text'][:len(results['heatmaps'][k])]) if sum(results['heatmaps'][k][i]) > threshold] for k in results['heatmaps'].keys()}

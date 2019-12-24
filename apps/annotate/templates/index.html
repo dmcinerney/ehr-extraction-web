@@ -13,9 +13,11 @@
     <script src="/static/d3.min.js"></script>
     <script src="/static/sprintf.min.js"></script>
     <script>
+      var progress = {{ progress }};
+      var num_instances = {{ num_instances }};
       var file_from_server = {{ file_from_server }};
       var file = "{{ file }}";
-      var queries = JSON.parse('{{ queries | tojson | safe}}');
+      var descriptions = JSON.parse('{{ descriptions | tojson | safe}}');
       var tabs = JSON.parse('{{ tabs | tojson | safe}}');
     </script>
     <script src="/static/annotate.js"></script>
@@ -24,6 +26,8 @@
 
   <body>
     <h1>Annotate</h1>
+    <div class="progress">
+    </div>
     <div>
       {% if file_from_server == "true" %}
         <text id="reports_file">Patient File: {{ file }}</text>

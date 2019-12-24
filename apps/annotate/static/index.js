@@ -1,15 +1,26 @@
 var states = {};
 $(document).ready(function(){
+    setProgress();
     populateTabs();
     includeHTML();
 });
 
+function setProgress() {
+    var progress_bar = d3.select(".progress")
+      .append("div")
+      .attr("class", "progress-bar")
+      .attr("role", "progressbar")
+      .attr("aria-valuemin", 0)
+      .attr("aria-valuemax", num_instances)
+    updateProgressBar(progress_bar, progress);
+}
+
 function onReady() {
     d3.selectAll(".panel_vis").each(function(d){
       if (d[3] == 'annotate') {
-          states[d[0]] = new AnnotateState(d3.select(this));
+          states[d[0]] = new AnnotateState(d3.select(this), d[5], d[6]);
       } else {
-          states[d[0]] = new ValidateState(d3.select(this));
+          states[d[0]] = new ValidateState(d3.select(this), d[5], d[6]);
       }});
     if (file_from_server) {
         getFile();
@@ -100,6 +111,11 @@ function getFile() {
     if (!file_from_server) {
         var x = document.getElementById("reports_file");
         formData.append("reports", x.files[0]);
+    } else {
+        if (file == "False") {
+            d3.select("body").html("Done!");
+            return;
+        }
     }
     displayLoader(d3.select("#loader_div"));
     $.post({

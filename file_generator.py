@@ -9,6 +9,7 @@ class FileGenerator:
         data_files = self.get_files(data_dir)
         annotation_files = self.get_files(annotations_dir)
         self.files_to_annotate = sorted(list(data_files.difference(annotation_files)))
+        self.length = len(data_files)
 
     def get_files(self, dir):
         return set([f for f in listdir(dir) if isfile(join(dir, f))])
@@ -20,3 +21,9 @@ class FileGenerator:
         if len(self.files_to_annotate) == 0:
             raise StopIteration
         return abspath(join(self.data_dir, self.files_to_annotate.pop(0)))
+
+    def __len__(self):
+        return self.length
+
+    def progress(self):
+        return len(self) - len(self.files_to_annotate)
