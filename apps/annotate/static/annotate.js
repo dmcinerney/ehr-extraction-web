@@ -102,7 +102,12 @@ class State {
           .append("option")
             .attr("value", function(d) { return d; })
             .attr("description", function(d) { return temp_this.descriptions[d]; })
-            .attr("index", function(d, i) { return i+2; })
+            .attr("index", function(d, i) {
+              if (temp_this.with_custom) {
+                  return i+2;
+              } else {
+                  return i+1;
+              }})
             .attr("id", function(d) { return tag_selector.attr("id")+"_option_"+d; })
             .html(function(d) {
               if (temp_this.descriptions[d] != "") {
