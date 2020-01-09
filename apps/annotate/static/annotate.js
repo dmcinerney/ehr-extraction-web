@@ -188,7 +188,7 @@ class State {
             .attr("selected", "false")
             .attr("class", "reports_sentence")
             .attr("report_id", function(d) { return d[0]; })
-            .on("click", function() { temp_this.selectSentence(d3.select(this)); })
+            .on("click", function() { temp_this.selectSentence(d3.select(this));console.log(d3.select(this).attr("sentence")); })
             .html(function(d) {
               return temp_this.current_result.original_reports[d[0]][3].slice(d[1][1], d[1][2]); });
 
@@ -196,6 +196,9 @@ class State {
         report_p.append("div")
           .append("text")
           .html(function(d, i) {
+            if (temp_this.current_result.sentence_spans[i].length <= 0) {
+                return temp_this.current_result.original_reports[i][3]
+            }
             var start = temp_this.current_result.sentence_spans[i][temp_this.current_result.sentence_spans[i].length-1][2];
             var end = temp_this.current_result.original_reports[i][3].length;
             return temp_this.current_result.original_reports[i][3].slice(start, end); });

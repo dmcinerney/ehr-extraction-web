@@ -56,7 +56,7 @@ def get_file():
     results1['original_reports'] = [(i,report.report_type,str(report.date),report.text) for i,report in results1['original_reports'].iterrows()]
     future_reports = pd.DataFrame(eval(instance['future_reports']))
     future_reports['date'] = pd.to_datetime(future_reports['date'])
-    results2 = startup['interface'].tokenize(future_reports)
+    results2 = startup['interface'].tokenize(future_reports, num_sentences=None)
     results2['original_reports'] = [(i,report.report_type,str(report.date),report.text) for i,report in results2['original_reports'].iterrows()]
     startup['tab_reports'] = [reports, future_reports]
     startup['tab_results'] = [results1, results2]
@@ -84,9 +84,9 @@ def query_article():
     model = startup['curr_models'][request.form['model']]
     print(model)
     results = startup['interface'].query_reports(model, startup['tab_reports'][index], query, is_nl=is_nl)
-    results['original_reports'] = [(i,report.report_type,str(report.date),report.text) for i,report in results['original_reports'].iterrows()]
     threshold = .5
-    extracted = {k:[i for i,sent in enumerate(results['tokenized_text'][:len(results['heatmaps'][k])]) if sum(results['heatmaps'][k][i]) > threshold] for k in results['heatmaps'].keys()}
+    tokenized_text = startup['tab_results'][index]['tokenized_text']
+    extracted = {k:[i for i,sent in enumerate(tokenized_text[:len(results['heatmaps'][k])]) if sum(results['heatmaps'][k][i]) > threshold] for k in results['heatmaps'].keys()}
     results['extracted'] = extracted
     if 'score' in results.keys():
         print(results['score'])
