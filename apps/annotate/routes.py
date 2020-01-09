@@ -52,8 +52,8 @@ def get_file():
         instance = pkl.load(f)
     targets = eval(instance['targets'])
     labels = eval(instance['labels'])
-    for i,target in enumerate(targets):
-        if labels[i]: print(target)
+    positive_targets = [target for i,target in enumerate(targets) if labels[i]]
+    print(positive_targets)
     reports = pd.DataFrame(eval(instance['reports']))
     reports['date'] = pd.to_datetime(reports['date'])
     results1 = startup['interface'].tokenize(reports)
@@ -65,7 +65,7 @@ def get_file():
     startup['tab_reports'] = [reports, future_reports]
     startup['tab_results'] = [results1, results2]
     patient_mrn = str(reports["patient_id"].iloc[0])
-    return {"tab_results":startup['tab_results'], "patient_mrn":patient_mrn}
+    return {"tab_results":startup['tab_results'], "patient_mrn":patient_mrn, "positive_targets":positive_targets}
 
 @app.route('/', methods=['POST'])
 def annotate():

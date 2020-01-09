@@ -123,6 +123,9 @@ function getFile() {
         data: formData,
         success: function(result, status){
             d3.select("#patient_mrn").html("Patient MRN: "+result["patient_mrn"]);
+            if ("positive_targets" in result) {
+                d3.select("#positive_targets").html("Positive Targets: "+result["positive_targets"]);
+            }
             onReportsLoaded(result["tab_results"]);
             closeLoader(d3.select("#loader_div"));
         },
