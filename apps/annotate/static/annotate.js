@@ -178,7 +178,8 @@ class State {
                   var start = temp_this.current_result.sentence_spans[d[0]][i-1][2];
               }
               var end = d[1][1];
-              return temp_this.current_result.original_reports[d[0]][3].slice(start, end); });
+              var raw_text = temp_this.current_result.original_reports[d[0]][3].slice(start, end);
+              return raw_text.replace(/\n/g, "<br />"); });
 
         // Add the sentence
         divs_for_sentence_and_in_between
@@ -190,7 +191,8 @@ class State {
             .attr("report_id", function(d) { return d[0]; })
             .on("click", function() { temp_this.selectSentence(d3.select(this));console.log(d3.select(this).attr("sentence")); })
             .html(function(d) {
-              return temp_this.current_result.original_reports[d[0]][3].slice(d[1][1], d[1][2]); });
+              var raw_text = temp_this.current_result.original_reports[d[0]][3].slice(d[1][1], d[1][2]);
+              return raw_text.replace(/\n/g, "<br />"); });
 
         // Add anything in original report after the last sentence
         report_p.append("div")
@@ -201,7 +203,8 @@ class State {
             }
             var start = temp_this.current_result.sentence_spans[i][temp_this.current_result.sentence_spans[i].length-1][2];
             var end = temp_this.current_result.original_reports[i][3].length;
-            return temp_this.current_result.original_reports[i][3].slice(start, end); });
+            var raw_text = temp_this.current_result.original_reports[i][3].slice(start, end);
+            return raw_text.replace(/\n/g, "<br />"); });
     }
     selectSentence(sentence_text) {
         sentence_text.interrupt("highlightMomentarily");
