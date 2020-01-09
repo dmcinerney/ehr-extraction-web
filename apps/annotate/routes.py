@@ -50,6 +50,10 @@ def get_file():
         raise Exception
     with open(filename, 'rb') as f:
         instance = pkl.load(f)
+    targets = eval(instance['targets'])
+    labels = eval(instance['labels'])
+    for i,target in enumerate(targets):
+        if labels[i]: print(target)
     reports = pd.DataFrame(eval(instance['reports']))
     reports['date'] = pd.to_datetime(reports['date'])
     results1 = startup['interface'].tokenize(reports)
