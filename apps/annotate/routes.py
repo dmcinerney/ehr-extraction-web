@@ -26,6 +26,7 @@ def index():
     num_instances = len(startup['file_generator'])
     file_from_server = "false" if startup["file"] is None else "true"
     descriptions = startup['interface'].get_descriptions()
+    hierarchy = startup['interface'].get_hierarchy()
     file = basename(startup["file"]) if startup["file"] else False
     tabs = tabs
     return render_template(
@@ -34,6 +35,7 @@ def index():
         num_instances=num_instances,
         file_from_server=file_from_server,
         descriptions=descriptions,
+        hierarchy=hierarchy,
         file=file,
         tabs=tabs,
     )

@@ -1,4 +1,3 @@
-
 .disabled {
     opacity: .7;
     pointer-events: none;
@@ -121,7 +120,7 @@ body {
 
 .reports_sentence {
     border: 2px;
-    border-color:lightgrey;
+    border-color:white;
     border-style:solid;
 }
 .reports_sentence:hover {
@@ -200,6 +199,11 @@ body {
     margin-bottom: 5px;
 }
 
+.htag_container {
+    justify-content: flex-start;
+    flex-flow: wrap;
+}
+
 #previous {
     flex: 0 1 100px;
 }
@@ -216,4 +220,10 @@ body {
     text-align: center;
     background-color: #eaeaea;
     border-radius: 10px;
+}
+
+.forward_button {
+    top: 0;
+    right: 0;
+    position: absolute;
 }

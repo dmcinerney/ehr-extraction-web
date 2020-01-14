@@ -1,21 +1,27 @@
 class State {
     constructor(annotation_element, valid_queries, with_custom) {
         this.annotation_element = annotation_element;
-        this.tags = valid_queries;
-        this.with_custom = with_custom;
-        this.descriptions = JSON.parse(JSON.stringify(descriptions));
-        if (!this.tags) {
-            this.tags = Object.keys(this.descriptions);
+        if (!valid_queries) {
+            this.tags = Object.keys(descriptions);
+            this.disabled = new Set([]);
+        } else {
+            this.tags = valid_queries;
+            var alltags = new Set(Object.keys(descriptions));
+            var tags = new Set(this.tags);
+            this.disabled = new Set([...alltags].filter(x => !tags.has(x)));
         }
+        this.with_custom = with_custom;
+        this.custom_tags = [];
         this.tag_sentences = {};
         this.sentence_tags = {};
-        this.num_custom = 0;
         this.selected_sentence = null;
         this.report_selected_sentences = {};
         this.current_result = null;
         this.addOnClicks();
         this.switchToTagSentences();
-        this.populateTagSelector(this.annotation_element.select("#tag"));
+        this.populateTagSelector(this.annotation_element.select("#tag"), this.custom_tags.concat(this.tags).concat(Array.from(this.disabled)), undefined, this.disabled);
+        this.htags = {};
+        this.populateHTagSelector(this.annotation_element.select('#htag0'), hierarchy["options"][hierarchy["start"]], undefined, this.disabled);
     }
     initReports(current_result) {
         this.current_result = current_result;
@@ -69,7 +75,7 @@ class State {
         }
         this.tag_sentences[tag].delete(i);
         if (this.tag_sentences[tag].size == 0) {
-            this.annotation_element.select("#tag_"+tag).remove();
+            this.annotation_element.select("#t_"+tag_idxs[tag]).remove();
             delete this.tag_sentences[tag];
         }
         var report = this.annotation_element.select("#sentence_"+i).attr("report_id");
@@ -81,10 +87,44 @@ class State {
              this.refreshSummary();
         }
     }
-    populateTagSelector(tag_selector, default_option="Select a Tag", disabled=new Set([])) {
+    populateHTagSelector(tag_selector, tags, default_option="Select a Tag", disabled=new Set([])) {
+//        $(tag_selector).on("hidden.bs.select", function(){ $(this).trigger("changed.bs.select"); });
+        if (!(tag_selector.attr("base_id") in this.htags)) {
+            this.htags[tag_selector.attr("base_id")] = [];
+        }
+        this.htags[tag_selector.attr("base_id")].push(tag_selector);
+        var temp_this = this;
+        tag_selector.attr("selecting_children", "false");
+        $(tag_selector.node()).on("shown.bs.select", function(){
+          d3.select("div.dropdown-menu.show").selectAll("li").select("a")
+            .each(function(d, i){
+              if (temp_this.with_custom){ i = i-1; }
+              if (i <= 0 || !(tags[i-1] in hierarchy["options"])){ return; }
+              // add button
+              d3.select(this).selectAll("button")
+                .data([0])
+                .enter()
+                  .append("button")
+                    .attr("class", "btn btn-secondary btn-sm forward_button")
+                    .html("<b>&gt;</b>")
+                    .each(function(){
+                      d3.select(this.parentNode)
+                        .style("padding-right", function(){
+                          console.log((parseInt(window.getComputedStyle(d3.select(this).node(), null).getPropertyValue('padding-right'))+30)+"px");
+                          return (parseInt(window.getComputedStyle(d3.select(this).node(), null).getPropertyValue('padding-right'))+30)+"px"; }); })
+                    .on("click", function(){
+                      tag_selector.attr("selecting_children", "true");
+                      console.log("clicked arrow");
+                      }); }); });
+        this.populateTagSelector(tag_selector, tags, default_option, disabled);
+    }
+    populateTagSelector(tag_selector, tags, default_option="Select a Tag", disabled=new Set([])) {
+        tag_selector.attr("data-container", "body");
         tag_selector.html("");
         tag_selector.append("option")
           .attr("value", "default")
+          .attr("index", 0)
+          .attr("id", tag_selector.attr("id")+"_option_"+tag_idxs["default"])
           .html(default_option)
           .attr("disabled", true);
         if (this.with_custom) {
@@ -92,49 +132,49 @@ class State {
               .attr("value", "custom")
               .attr("description", "")
               .attr("index", 1)
-              .attr("id", tag_selector.attr("id")+"_option_custom")
+              .attr("id", tag_selector.attr("id")+"_option_"+tag_idxs["custom"])
               .html("Add a Custom Tag: \"\"");
         }
         var temp_this = this;
         tag_selector.selectAll(".tags")
-          .data(this.tags)
+          .data(tags)
           .enter()
           .append("option")
             .attr("value", function(d) { return d; })
-            .attr("description", function(d) { return temp_this.descriptions[d]; })
+            .attr("description", function(d) { return descriptions[d]; })
             .attr("index", function(d, i) {
-              if (temp_this.with_custom) {
-                  return i+2;
-              } else {
-                  return i+1;
-              }})
-            .attr("id", function(d) { return tag_selector.attr("id")+"_option_"+d; })
+              if (temp_this.with_custom) { i = i+1; }
+              return i+1; })
+            .attr("id", function(d) { return tag_selector.attr("id")+"_option_"+tag_idxs[d]; })
+            .each(function(d){
+              if (disabled.has(d)) { d3.select(this).attr("disabled", "true"); }; })
             .html(function(d) {
-              if (temp_this.descriptions[d] != "") {
-                  return d + ": " + temp_this.descriptions[d];
+              if (descriptions[d] != "") {
+                  return d + ": " + descriptions[d];
               } else {
                   return d;
               }});
-        $("#"+tag_selector.attr("id"), this.annotation_element.node()).selectpicker('refresh');
+        $(tag_selector.node()).selectpicker('refresh');
         if (this.with_custom) {
+//            $(d3.select("div.dropdown-menu.show").select(".bs-searchbox").select("input").node()).on("input", function() {
             $("#"+tag_selector.attr("id")+" ~ div.dropdown-menu:first > div.bs-searchbox > input", this.annotation_element.node()).on("input", function() {
               var text = $(this).val();
-              if (text != tag_selector.select("#"+tag_selector.attr("id")+"_option_custom").attr("description")) {
-                  tag_selector.select("#"+tag_selector.attr("id")+"_option_custom")
+              if (text != tag_selector.select("#"+tag_selector.attr("id")+"_option_"+tag_idxs["custom"]).attr("description")) {
+                  tag_selector.select("#"+tag_selector.attr("id")+"_option_"+tag_idxs["custom"])
                     .attr("description", text)
                     .html("Add a Custom Tag: \""+text+"\"");
-                  $("#"+tag_selector.attr("id"), temp_this.annotation_element.node()).selectpicker('refresh');
+                  $(tag_selector.node()).selectpicker('refresh');
                   $(this).trigger("input");
               }});
         }
     }
-    addCustomTag(description) {
-        this.num_custom = this.num_custom + 1;
-        var tagname = 'custom'+this.num_custom;
-        if (tagname in this.descriptions) { alert("error! server bug: no query can be named "+tagname) }
-        this.tags.unshift(tagname);
-        this.descriptions[tagname] = description
-        this.populateTagSelector(this.annotation_element.select("#tag"));
+    addCustomTag(description, parent_tag=false) {
+        var tagname = 'custom'+(this.custom_tags.length + 1);
+        if (tagname in descriptions) { alert("error! server bug: no query can be named "+tagname) }
+        this.custom_tags.unshift(tagname);
+        descriptions[tagname] = description
+        this.populateTagSelector(this.annotation_element.select("#tag"), this.custom_tags.concat(this.tags).concat(Array.from(this.disabled)), undefined, this.disabled);
+        // TODO: add to a place in the hierarchy and refresh all tag selectors!
     }
     populateReportSelector() {
         this.annotation_element.select("#report")
@@ -216,6 +256,7 @@ class State {
         var report = this.annotation_element.select("#report").node().selectedIndex;
         this.annotation_element.select("#reports_div").select(".custom_text").selectAll(".report_p")
           .classed("selected", function(d, i) { return i == report; });
+        this.annotation_element.select(".report_p.selected").node().scrollIntoView({block: "start"});
         this.annotation_element.select("#previous").classed("disabled", this.annotation_element.select("#report").node().selectedIndex == 0);
         this.annotation_element.select("#next").classed("disabled", this.annotation_element.select("#report").node().selectedIndex == this.current_result.original_reports.length-1);
         $("#report", this.annotation_element.node()).selectpicker('refresh');
@@ -244,13 +285,13 @@ class State {
             .attr("sentence", function(d) { return d[0]; });
         list_item.append("text")
           .attr("class", "sentence_tag_text")
-          .html(function(d) { return d[1] + ": " + temp_this.descriptions[d[1]]; })
+          .html(function(d) { return d[1] + ": " + descriptions[d[1]]; })
           .on("click", function() {
             var tag = d3.select(this.parentNode).attr("tag");
-            temp_this.annotation_element.select("#tag").node().selectedIndex = temp_this.annotation_element.select("#tag_option_"+tag).attr("index");
+            temp_this.annotation_element.select("#tag").node().selectedIndex = temp_this.annotation_element.select("#tag_option_"+tag_idxs[tag]).attr("index");
             temp_this.chooseTag();
             var sentence_num = d3.select(this.parentNode).attr("sentence");
-            var sentence = temp_this.annotation_element.select("#summary_sentence_"+tag+"_"+sentence_num);
+            var sentence = temp_this.annotation_element.select("#summary_sentence_"+tag_idxs[tag]+"_"+sentence_num);
             sentence.node().scrollIntoView({block: "center"});
             temp_this.highlightMomentarily(sentence.select(".summary_sentence_text")); });
         this.addAnnotationButton(list_item);
@@ -279,16 +320,16 @@ class State {
           .append("p")
             .attr("class", "summary_p")
             .attr("tag", function(d) { return d; })
-            .attr("id", function(d) { return "tag_"+d; });
+            .attr("id", function(d) { return "t_"+tag_idxs[d]; });
         summary_p.append("p")
           .attr("class", "tagheader")
-          .html(function(d) { return d + ": " + temp_this.descriptions[d]; });
+          .html(function(d) { return d + ": " + descriptions[d]; });
         var sentence_p = summary_p.selectAll(".summary_sentence")
           .data(function(d) { return Array.from(temp_this.tag_sentences[d]).sort(function(a,b){return temp_this.sortNumber(a, b);}).map(function(e){ return [d, e]; }); })
           .enter()
           .append("p")
             .attr("class", "summary_sentence")
-            .attr("id", function(d) { return "summary_sentence_"+d[0]+"_"+d[1]; })
+            .attr("id", function(d) { return "summary_sentence_"+tag_idxs[d[0]]+"_"+d[1]; })
             .attr("tag", function(d) { return d[0]; })
             .attr("sentence", function(d) { return d[1]; });
         sentence_p.append("div")
@@ -320,17 +361,94 @@ class State {
           .html("<span aria-hidden=\"true\">&times;</span>");
     }
     chooseTag() {
+        var temp_this = this;
+        this.selectTag(this.annotation_element.select("#tag"), "htag", function(){ temp_this.chooseHTag(d3.select(this)); });
         this.displayTag();
         this.switchToTagSentences();
+    }
+    selectTag(tag_selector, htag_selector_id, change_function) {
+        var tag = tag_selector.node().options[tag_selector.node().selectedIndex].value;
+        var htags = this.htags[htag_selector_id];
+        if (tag == "default") {
+            tag_selector = htags[0];
+            tag_selector.node().selectedIndex = 0;
+            $(tag_selector.node()).selectpicker('refresh');
+            this.addSubHTag(tag_selector, false, change_function);
+        } else {
+            if (tag == "custom") {
+                this.addCustomTag(tag_selector.select("#"+tag_selector.select("id")+"_option_"+tag_idxs["custom"]).attr("description"));
+                tag_selector.node().selectedIndex = tag_selector.select("#"+tag_selector.select("id")+"_option_"+tag_idxs["custom"]).attr("index");
+                $(tag_selector.node()).selectpicker('refresh');
+                tag = "custom"+this.custom_tags.length;
+            }
+            var linearization = hierarchy["linearizations"][tag];
+            console.log(linearization);
+            var node = hierarchy["start"];
+            for (var i = 0; i < linearization.length; i++) {
+                var tag_selector = htags[i];
+                var index = linearization[i];
+                var node = hierarchy["options"][node][index];
+                var tag_index = tag_selector.select("#"+tag_selector.attr("id")+"_option_"+tag_idxs[node]).attr("index");
+                tag_selector.node().selectedIndex = tag_index;
+                $(tag_selector.node()).selectpicker('refresh');
+                this.addSubHTag(tag_selector, false, change_function);
+            }
+        }
+    }
+    chooseHTag(tag_selector) {
+        var temp_this = this;
+        if (!(this.selectHTag(tag_selector, "tag", function(){ temp_this.chooseHTag(d3.select(this)); }))) {
+            this.displayTag();
+            this.switchToTagSentences();
+        }
+    }
+    selectHTag(htag_selector, tag_selector_id, change_function) {
+        var tag = htag_selector.node().options[htag_selector.node().selectedIndex].value;
+        if (tag == "custom") {
+            this.addCustomTag(htag_selector.select("#"+htag_selector.attr("id")+"_option_"+tag_idxs["custom"]).attr("description"));
+            htag_selector.node().selectedIndex = htag_selector.select("#"+htag_selector.attr("id")+"_option_"+tag_idxs["custom"]).attr("index");
+            $(htag_selector.node()).selectpicker('refresh');
+            tag = "custom"+this.custom_tags.length;
+        }
+        var open_after = htag_selector.attr("selecting_children") == "true";
+        this.addSubHTag(htag_selector, open_after, change_function);
+        if (!(open_after)) {
+            this.annotation_element.select("#"+tag_selector_id).node().selectedIndex = this.annotation_element.select("#"+tag_selector_id+"_option_"+tag_idxs[tag]).attr("index");
+            $(this.annotation_element.select("#"+tag_selector_id).node()).selectpicker('refresh');
+        }
+        return open_after;
+    }
+    addSubHTag(tag_selector, open_after, change_function) {
+        var base_id = tag_selector.attr("base_id");
+        var htags = this.htags[base_id];
+        var num = Number(tag_selector.attr("num"));
+        for (var i = htags.length-1; i > num; i--) {
+            var last_tag_selector = htags.pop();
+            d3.select(last_tag_selector.node().parentNode).remove();
+            console.log("removing "+i);
+        }
+        var tag = tag_selector.node().options[tag_selector.node().selectedIndex].value;
+        if (tag in hierarchy["options"]){
+            var options = hierarchy["options"][tag];
+            var next_tag_selector = d3.select(tag_selector.node().parentNode.parentNode).append("select")
+              .attr("class", "selectpicker")
+              .attr("data-live-search", "true")
+              .attr("num", num+1)
+              .attr("base_id", base_id)
+              .attr("id", base_id+(num+1))
+              .on("change", change_function);
+            if (open_after) {
+                console.log("selecting_children");
+                tag_selector.attr("selecting_children", "false");
+                $(next_tag_selector.node()).on("loaded.bs.select", function(){
+                  $(next_tag_selector.node()).selectpicker('toggle'); });
+            }
+            this.populateHTagSelector(next_tag_selector, options, undefined, this.disabled);
+        }
     }
     displayTag() {
         var tag_selector = this.annotation_element.select("#tag").node();
         var tag = tag_selector.options[tag_selector.selectedIndex].value;
-        if (tag == "custom") {
-            this.addCustomTag(this.annotation_element.select("#tag_option_custom").attr("description"));
-            tag_selector.selectedIndex = this.annotation_element.select("#tag_option_custom"+this.num_custom).attr("index");
-            tag = "custom"+this.num_custom;
-        }
         if (tag == "default") {
             this.annotation_element.selectAll(".summary_p")
               .classed("selected", true);
@@ -338,7 +456,6 @@ class State {
             this.annotation_element.selectAll(".summary_p")
               .classed("selected", function() { return d3.select(this).attr("tag") == tag; });
         }
-        $("#tag", this.annotation_element.node()).selectpicker('refresh');
     }
     sortNumber(a, b) {
         return a - b;
@@ -380,9 +497,10 @@ class State {
         this.chooseReport();
     }
     showAllSummaries() {
-        this.switchToTagSentences();
-        this.annotation_element.select("#tag").node().selectedIndex = 0;
-        this.displayTag();
+        var tag_selector = this.annotation_element.select("#tag");
+        tag_selector.node().selectedIndex = 0;
+        $(tag_selector.node()).selectpicker("refresh");
+        this.chooseTag();
     }
     addOnClicks() {
         var temp_this = this;
@@ -390,6 +508,7 @@ class State {
         this.annotation_element.select("#report").on("change", function(){ temp_this.chooseReport(); })
         this.annotation_element.select("#next").on("click", function(){ temp_this.nextReport(); })
         this.annotation_element.select("#tag").on("change", function(){ temp_this.chooseTag(); });
+        this.annotation_element.select("#htag0").on("change", function(){ temp_this.chooseHTag(d3.select(this)); });
         this.annotation_element.select("#show_all").on("click", function(){ temp_this.showAllSummaries(); });
     }
 }
@@ -398,30 +517,49 @@ class AnnotateState extends State{
     constructor(annotation_element, valid_queries, with_custom) {
         super(annotation_element, valid_queries, with_custom);
         var temp_this = this;
-        this.annotation_element.select("#sentence_tags").append("select")
+        var sentence_tag = this.annotation_element.select("#sentence_tags").append("select")
           .attr("class", "selectpicker")
           .attr("data-live-search", "true")
           .attr("id", "sentence_tag")
           .on("change", function(){ temp_this.addSentenceTag(); });
+        var sentence_htag = this.annotation_element.select("#sentence_tags").append("div")
+          .attr("class", "buttons htag_container")
+            .append("select")
+            .attr("class", "selectpicker")
+            .attr("data-live-search", "true")
+            .attr("num", 0)
+            .attr("base_id", "sentence_htag")
+            .attr("id", "sentence_htag0")
+            .on("change", function(){ temp_this.addSentenceHTag(d3.select(this)); });
+        this.populateTagSelector(sentence_tag, this.custom_tags.concat(this.tags).concat(Array.from(this.disabled)), "Add a tag", this.disabled);
+        this.populateHTagSelector(sentence_htag, hierarchy["options"][hierarchy["start"]], "Add a tag", this.disabled);
     }
     addSentenceTag() {
-        var tag_selector = this.annotation_element.select("#sentence_tag").node();
-        var tag = tag_selector.options[tag_selector.selectedIndex].value;
-        if (tag == "custom") {
-            this.addCustomTag(this.annotation_element.select("#sentence_tag_option_custom").attr("description"));
-            tag = "custom"+this.num_custom;
-        }
+        var tag_selector = this.annotation_element.select("#sentence_tag")
+        var temp_this = this;
+        var change_function = function(){ temp_this.addSentenceHTag(d3.select(this)); };
+        this.selectTag(tag_selector, "sentence_htag", change_function);
+        var tag = tag_selector.node().options[tag_selector.node().selectedIndex].value;
         this.tagSentence(this.selected_sentence, tag);
         this.displaySentenceTags(this.selected_sentence);
+        tag_selector.node().selectedIndex = 0;
+        $(tag_selector.node()).selectpicker("refresh");
+        this.selectTag(tag_selector, "sentence_htag", change_function);
         this.switchToSentenceTags();
     }
-    displaySentenceTags(i) {
-        super.displaySentenceTags(i);
-        this.populateTagSelector(this.annotation_element.select("#sentence_tag"), "Add a Tag to this Sentence");
-    }
-    addCustomTag(description) {
-        super.addCustomTag(description);
-        this.populateTagSelector(this.annotation_element.select("#sentence_tag"), "Add a Tag to this Sentence");
+    addSentenceHTag(tag_selector) {
+        var temp_this = this;
+        var change_function = function(){ temp_this.addSentenceHTag(d3.select(this)); };
+        if (!(this.selectHTag(tag_selector, "sentence_tag", change_function))) {
+            var tag = tag_selector.node().options[tag_selector.node().selectedIndex].value;
+            this.tagSentence(this.selected_sentence, tag);
+            this.displaySentenceTags(this.selected_sentence);
+            tag_selector = this.annotation_element.select("#sentence_htag0");
+            tag_selector.node().selectedIndex = 0;
+            $(tag_selector.node()).selectpicker("refresh");
+            this.selectHTag(tag_selector, "sentence_tag", change_function);
+            this.switchToSentenceTags();
+        }
     }
 }
 
@@ -471,46 +609,65 @@ class ValidateState extends State {
           .attr("for", function(d) { return "checkbox_"+d[0]+"_"+d[1]; });
     }
     chooseTag() {
+        var tag_selector = this.annotation_element.select("#tag");
+        var tag = tag_selector.node().options[tag_selector.node().selectedIndex].value;
+        var temp_this = this;
+        this.selectTag(tag_selector, "htag", function(){ temp_this.chooseHTag(d3.select(this)); });
+        if (!(tag in this.cached_results)) {
+            this.queryReports();
+        } else {
+            this.displayTag();
+            this.switchToTagSentences();
+        }
+    }
+    chooseHTag(tag_selector) {
+        var tag = tag_selector.node().options[tag_selector.node().selectedIndex].value;
+        var temp_this = this;
+        if (this.selectHTag(tag_selector, "tag", function(){ temp_this.chooseHTag(d3.select(this)); })) { return; }
+        if (!(tag in this.cached_results) && tag != "default") {
+            this.queryReports();
+        } else {
+            this.displayTag();
+            this.switchToTagSentences();
+        }
+    }
+    queryReports() {
+        var tag_selector = this.annotation_element.select("#tag");
+        var tag = tag_selector.node().options[tag_selector.node().selectedIndex].value;
+        var is_nl = tag == 'custom';
         var url = 'http://localhost:5000/query';
         var formData = new FormData();
-        var tag_selector = this.annotation_element.select("#tag").node();
-        var tag = tag_selector.options[tag_selector.selectedIndex].value;
-        var is_nl = tag == 'custom';
         formData.append("is_nl", is_nl);
         formData.append("index", this.annotation_element.datum()[4]);
         formData.append("model", this.annotation_element.datum()[0]);
         if (is_nl) {
-            this.addCustomTag(this.annotation_element.select("#tag_option_custom").attr("description"));
-            tag_selector.selectedIndex = this.annotation_element.select("#tag_option_custom"+this.num_custom).attr("index");
-            tag = "custom"+this.num_custom;
-            formData.append("query", this.annotation_element.select("#tag_option_"+tag).attr("description"));
+            this.addCustomTag(tag_selector.select("#tag_option_"+tag_idxs["custom"]).attr("description"));
+            tag_selector.node().selectedIndex = tag_selector.select("#tag_option_"+tag_idxs["custom"+this.custom_tags.length]).attr("index");
+            tag = "custom"+this.custom_tags.length;
+            formData.append("query", tag_selector.select("#tag_option_"+tag_idxs[tag]).attr("description"));
         } else {
             formData.append("query", tag);
         }
-        if (!(tag in this.cached_results)) {
-            this.cached_results[tag] = null;
-            if (!file_from_server) {
-                var x = this.annotation_element.select("#reports_file").node();
-                formData.append("reports", x.files[0]);
-            }
-            displayLoader(d3.select("#loader_div"));
-            var temp_this = this;
-            $.post({
-                url: url,
-                data: formData,
-                success: function(result, status){
-                    temp_this.cached_results[tag] = result;
-                    temp_this.tagAllSentences(tag);
-                    temp_this.displayTag();
-                    temp_this.switchToTagSentences();
-                    closeLoader(d3.select("#loader_div"));
-                },
-                processData: false,
-                contentType: false,
-            });
-        } else {
-            super.chooseTag();
+        this.cached_results[tag] = null;
+        if (!file_from_server) {
+            var x = this.annotation_element.select("#reports_file").node();
+            formData.append("reports", x.files[0]);
         }
+        displayLoader(d3.select("#loader_div"));
+        var temp_this = this;
+        $.post({
+            url: url,
+            data: formData,
+            success: function(result, status){
+                temp_this.cached_results[tag] = result;
+                temp_this.tagAllSentences(tag);
+                temp_this.displayTag();
+                temp_this.switchToTagSentences();
+                closeLoader(d3.select("#loader_div"));
+            },
+            processData: false,
+            contentType: false,
+        });
     }
     arrSum(arr) {
         return arr.reduce((a,b) => a + b, 0);

@@ -18,6 +18,11 @@
       var file_from_server = {{ file_from_server }};
       var file = "{{ file }}";
       var descriptions = JSON.parse('{{ descriptions | tojson | safe}}');
+      var tag_idxs = {};
+      Object.keys(descriptions).forEach(function(e,i){tag_idxs[e] = i;});
+      tag_idxs["default"] = Object.keys(tag_idxs).length;
+      tag_idxs["custom"] = Object.keys(tag_idxs).length;
+      var hierarchy = JSON.parse('{{ hierarchy | tojson | safe}}');
       var tabs = JSON.parse('{{ tabs | tojson | safe}}');
     </script>
     <script src="/static/annotate.js"></script>
