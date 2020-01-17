@@ -162,8 +162,24 @@ function submit() {
 function addCustomTag(description, parent_tag=false) {
     var tagname = 'custom'+(custom_tags.length + 1);
     if (tagname in descriptions) { alert("error! server bug: no query can be named "+tagname) }
+    tag_idxs[tagname] = Array.from(Object.keys(tag_idxs)).length
     descriptions[tagname] = description
     custom_tags.unshift(tagname);
-    // TODO: update hierarchy, linearizations and options
-    Object.values(states).forEach(function(e){e.refreshTagSelectors();})
+    if (!parent_tag) {
+        parent_tag = hierarchy['start'];
+    }
+    hierarchy['options'][parent_tag].unshift(tagname);
+    hierarchy['options'][tagname] = [];
+    hierarchy['parents'][tagname] = parent_tag;
+    hierarchy['options'][parent_tag].forEach(function(e, i){ hierarchy['indices'][e] = i; })
+    Array.from(Object.values(states)).forEach(function(e){ if (e.with_custom){e.refreshTagSelectors();} });
+}
+
+function linearize(tag) {
+    var indices = [];
+    while (tag in hierarchy['parents']) {
+        indices.unshift(hierarchy['indices'][tag]);
+        tag = hierarchy['parents'][tag];
+    }
+    return indices;
 }

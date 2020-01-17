@@ -18,9 +18,9 @@ class State {
         this.current_result = null;
         this.addOnClicks();
         this.switchToTagSentences();
-        this.populateTagSelector(this.annotation_element.select("#tag"), custom_tags.concat(this.tags).concat(Array.from(this.disabled)), undefined, this.disabled);
         this.htags = {};
-        this.populateHTagSelector(this.annotation_element.select('#htag0'), hierarchy["options"][hierarchy["start"]], undefined, this.disabled);
+        this.annotation_element.select("#htag0").attr("parent", hierarchy["start"]);
+        this.refreshTagSelectors();
     }
     initReports(current_result) {
         this.current_result = current_result;
@@ -87,14 +87,26 @@ class State {
         }
     }
     refreshTagSelectors() {
-        // TODO: refresh all Tag Selectors
+        var temp_this = this;
+        var refresh_func = function(){ temp_this.refreshTagSelector(d3.select(this)); };
+        this.annotation_element.selectAll(".selectpicker.tag_selector").each(refresh_func);
+        this.annotation_element.selectAll(".selectpicker.htag_selector").each(refresh_func);
     }
-    populateHTagSelector(tag_selector, tags, default_option="Select a Tag", disabled=new Set([])) {
+    refreshTagSelector(tag_selector) {
+        if (tag_selector.classed("htag_selector")) {
+            this.populateHTagSelector(tag_selector, hierarchy["options"][tag_selector.attr("parent")], this.disabled);
+        } else {
+            this.populateTagSelector(tag_selector, custom_tags.concat(this.tags).concat(Array.from(this.disabled)), this.disabled);
+        }
+    }
+    populateHTagSelector(tag_selector, tags, disabled=new Set([])) {
 //        $(tag_selector).on("hidden.bs.select", function(){ $(this).trigger("changed.bs.select"); });
         if (!(tag_selector.attr("base_id") in this.htags)) {
             this.htags[tag_selector.attr("base_id")] = [];
         }
-        this.htags[tag_selector.attr("base_id")].push(tag_selector);
+        if (this.htags[tag_selector.attr("base_id")].length <= Number(tag_selector.attr("num"))) {
+            this.htags[tag_selector.attr("base_id")].push(tag_selector);
+        }
         var temp_this = this;
         tag_selector.attr("selecting_children", "false");
         $(tag_selector.node()).on("shown.bs.select", function(){
@@ -126,16 +138,16 @@ class State {
               });
             });
           });
-        this.populateTagSelector(tag_selector, tags, default_option, disabled);
+        this.populateTagSelector(tag_selector, tags, disabled);
     }
-    populateTagSelector(tag_selector, tags, default_option="Select a Tag", disabled=new Set([])) {
+    populateTagSelector(tag_selector, tags, disabled=new Set([])) {
         tag_selector.attr("data-container", "body");
         tag_selector.html("");
         tag_selector.append("option")
           .attr("value", "default")
           .attr("index", 0)
           .attr("id", tag_selector.attr("id")+"_option_"+tag_idxs["default"])
-          .html(default_option)
+          .html(tag_selector.attr("default"))
           .attr("disabled", true);
         if (this.with_custom) {
             tag_selector.append("option")
@@ -359,12 +371,12 @@ class State {
             this.addSubHTag(tag_selector, false);
         } else {
             if (tag == "custom") {
-                addCustomTag(tag_selector.select("#"+tag_selector.select("id")+"_option_"+tag_idxs["custom"]).attr("description"));
-                tag_selector.node().selectedIndex = tag_selector.select("#"+tag_selector.select("id")+"_option_"+tag_idxs["custom"]).attr("index");
+                addCustomTag(tag_selector.select("#"+tag_selector.attr("id")+"_option_"+tag_idxs["custom"]).attr("description"));
+                tag_selector.node().selectedIndex = tag_selector.select("#"+tag_selector.attr("id")+"_option_"+tag_idxs["custom"+custom_tags.length]).attr("index");
                 $(tag_selector.node()).selectpicker('refresh');
                 tag = "custom"+custom_tags.length;
             }
-            var linearization = hierarchy["linearizations"][tag];
+            var linearization = linearize(tag);
             console.log(linearization);
             var node = hierarchy["start"];
             for (var i = 0; i < linearization.length; i++) {
@@ -388,8 +400,8 @@ class State {
     selectHTag(htag_selector, tag_selector_id) {
         var tag = htag_selector.node().options[htag_selector.node().selectedIndex].value;
         if (tag == "custom") {
-            addCustomTag(htag_selector.select("#"+htag_selector.attr("id")+"_option_"+tag_idxs["custom"]).attr("description"));
-            htag_selector.node().selectedIndex = htag_selector.select("#"+htag_selector.attr("id")+"_option_"+tag_idxs["custom"]).attr("index");
+            addCustomTag(htag_selector.select("#"+htag_selector.attr("id")+"_option_"+tag_idxs["custom"]).attr("description"), htag_selector.attr("parent"));
+            htag_selector.node().selectedIndex = htag_selector.select("#"+htag_selector.attr("id")+"_option_"+tag_idxs["custom"+custom_tags.length]).attr("index");
             $(htag_selector.node()).selectpicker('refresh');
             tag = "custom"+custom_tags.length;
         }
@@ -416,11 +428,13 @@ class State {
         if (tag in hierarchy["options"]){
             var options = hierarchy["options"][tag];
             var next_tag_selector = d3.select(tag_selector.node().parentNode.parentNode).append("select")
-              .attr("class", "selectpicker")
+              .attr("class", "selectpicker htag_selector")
               .attr("data-live-search", "true")
               .attr("num", num+1)
               .attr("base_id", base_id)
               .attr("id", base_id+(num+1))
+              .attr("parent", tag)
+              .attr("default", tag_selector.attr("default"))
               .on("change", tag_selector.on("change"));
             if (open_after) {
                 console.log("selecting_children");
@@ -428,7 +442,8 @@ class State {
                 $(next_tag_selector.node()).on("loaded.bs.select", function(){
                   $(next_tag_selector.node()).selectpicker('toggle'); });
             }
-            this.populateHTagSelector(next_tag_selector, options, undefined, this.disabled);
+            this.refreshTagSelector(next_tag_selector);
+//            this.populateHTagSelector(next_tag_selector, options, this.disabled);
         }
     }
     displayTag() {
@@ -503,21 +518,24 @@ class AnnotateState extends State{
         super(annotation_element, valid_queries, with_custom);
         var temp_this = this;
         var sentence_tag = this.annotation_element.select("#sentence_tags").append("select")
-          .attr("class", "selectpicker")
+          .attr("class", "selectpicker tag_selector")
           .attr("data-live-search", "true")
           .attr("id", "sentence_tag")
+          .attr("default", "Add a Tag")
           .on("change", function(){ temp_this.addSentenceTag(); });
         var sentence_htag = this.annotation_element.select("#sentence_tags").append("div")
           .attr("class", "buttons htag_container")
             .append("select")
-            .attr("class", "selectpicker")
+            .attr("class", "selectpicker htag_selector")
             .attr("data-live-search", "true")
             .attr("num", 0)
             .attr("base_id", "sentence_htag")
             .attr("id", "sentence_htag0")
+            .attr("parent", hierarchy["start"])
+            .attr("default", "Add a Tag")
             .on("change", function(){ temp_this.addSentenceHTag(d3.select(this)); });
-        this.populateTagSelector(sentence_tag, custom_tags.concat(this.tags).concat(Array.from(this.disabled)), "Add a tag", this.disabled);
-        this.populateHTagSelector(sentence_htag, hierarchy["options"][hierarchy["start"]], "Add a tag", this.disabled);
+        this.refreshTagSelector(sentence_tag);
+        this.refreshTagSelector(sentence_htag);
     }
     addSentenceTag() {
         var tag_selector = this.annotation_element.select("#sentence_tag")
@@ -605,28 +623,25 @@ class ValidateState extends State {
     }
     chooseHTag(tag_selector) {
         var tag = tag_selector.node().options[tag_selector.node().selectedIndex].value;
+        var is_nl = tag == 'custom';
         var temp_this = this;
         if (this.selectHTag(tag_selector, "tag")) { return; }
         if (!(tag in this.cached_results) && tag != "default") {
-            this.queryReports();
+            this.queryReports(is_nl);
         } else {
             this.displayTag();
             this.switchToTagSentences();
         }
     }
-    queryReports() {
+    queryReports(is_nl) {
         var tag_selector = this.annotation_element.select("#tag");
         var tag = tag_selector.node().options[tag_selector.node().selectedIndex].value;
-        var is_nl = tag == 'custom';
         var url = 'http://localhost:5000/query';
         var formData = new FormData();
         formData.append("is_nl", is_nl);
         formData.append("index", this.annotation_element.datum()[4]);
         formData.append("model", this.annotation_element.datum()[0]);
         if (is_nl) {
-            addCustomTag(tag_selector.select("#tag_option_"+tag_idxs["custom"]).attr("description"));
-            tag_selector.node().selectedIndex = tag_selector.select("#tag_option_"+tag_idxs["custom"+custom_tags.length]).attr("index");
-            tag = "custom"+custom_tags.length;
             formData.append("query", tag_selector.select("#tag_option_"+tag_idxs[tag]).attr("description"));
         } else {
             formData.append("query", tag);
