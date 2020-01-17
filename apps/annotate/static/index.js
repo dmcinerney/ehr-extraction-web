@@ -158,3 +158,12 @@ function submit() {
         contentType: false,
     });
 }
+
+function addCustomTag(description, parent_tag=false) {
+    var tagname = 'custom'+(custom_tags.length + 1);
+    if (tagname in descriptions) { alert("error! server bug: no query can be named "+tagname) }
+    descriptions[tagname] = description
+    custom_tags.unshift(tagname);
+    // TODO: update hierarchy, linearizations and options
+    Object.values(states).forEach(function(e){e.refreshTagSelectors();})
+}

@@ -18,6 +18,7 @@
       var file_from_server = {{ file_from_server }};
       var file = "{{ file }}";
       var descriptions = JSON.parse('{{ descriptions | tojson | safe}}');
+      var custom_tags = [];
       var tag_idxs = {};
       Object.keys(descriptions).forEach(function(e,i){tag_idxs[e] = i;});
       tag_idxs["default"] = Object.keys(tag_idxs).length;
