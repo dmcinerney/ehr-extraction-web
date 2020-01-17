@@ -298,6 +298,7 @@ class State {
           .on("click", function() {
             var tag = d3.select(this.parentNode).attr("tag");
             temp_this.annotation_element.select("#tag").node().selectedIndex = temp_this.annotation_element.select("#tag_option_"+tag_idxs[tag]).attr("index");
+            $(temp_this.annotation_element.select("#tag").node()).selectpicker('refresh');
             temp_this.chooseTag();
             var sentence_num = d3.select(this.parentNode).attr("sentence");
             var sentence = temp_this.annotation_element.select("#summary_sentence_"+tag_idxs[tag]+"_"+sentence_num);
@@ -585,8 +586,8 @@ class ValidateState extends State {
         checkbox_container.append("input")
           .attr("type", "checkbox")
           .attr("class", "custom-control-input")
-          .attr("id", function(d) { return "checkbox_"+d[0]+"_"+d[1]; })
-          .each(function(d, i){
+          .attr("id", function() { return "checkbox_"+d3.select(this.parentNode.parentNode).attr("id"); })
+          .each(function(){
             var sentence_num = d3.select(this.parentNode.parentNode).attr("sentence");
             var tag = d3.select(this.parentNode.parentNode).attr("tag");
             var senttag = sentence_num+"_"+tag;
@@ -600,14 +601,14 @@ class ValidateState extends State {
             var tag = d3.select(this.parentNode.parentNode).attr("tag");
             var senttag = sentence_num+"_"+tag;
             temp_this.checked_senttags[senttag] = d3.select(this).node().checked;
-            if (temp_this.annotation_element.select("#checkbox_"+sentence_num+"_"+tag).node()) {
-                 temp_this.annotation_element.select("#checkbox_"+sentence_num+"_"+tag).node().checked = temp_this.checked_senttags[senttag];}
-            if (temp_this.annotation_element.select("#checkbox_"+tag+"_"+sentence_num).node()) {
-                 temp_this.annotation_element.select("#checkbox_"+tag+"_"+sentence_num).node().checked = temp_this.checked_senttags[senttag];}
+            if (temp_this.annotation_element.select("#checkbox_sentence_tag_"+sentence_num+"_"+tag_idxs[tag]).node()) {
+                 temp_this.annotation_element.select("#checkbox_sentence_tag_"+sentence_num+"_"+tag_idxs[tag]).node().checked = temp_this.checked_senttags[senttag];}
+            if (temp_this.annotation_element.select("#checkbox_summary_sentence_"+tag_idxs[tag]+"_"+sentence_num).node()) {
+                 temp_this.annotation_element.select("#checkbox_summary_sentence_"+tag_idxs[tag]+"_"+sentence_num).node().checked = temp_this.checked_senttags[senttag];}
             });
         checkbox_container.append("label")
           .attr("class", "custom-control-label")
-          .attr("for", function(d) { return "checkbox_"+d[0]+"_"+d[1]; });
+          .attr("for", function(d) { return "checkbox_"+d3.select(this.parentNode.parentNode).attr("id"); });
     }
     chooseTag() {
         var tag_selector = this.annotation_element.select("#tag");
