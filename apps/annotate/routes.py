@@ -52,6 +52,7 @@ def get_file():
         raise Exception
     with open(filename, 'rb') as f:
         instance = pkl.load(f)
+    #import pdb; pdb.set_trace()
     targets = eval(instance['targets'])
     labels = eval(instance['labels'])
     positive_targets = [target for i,target in enumerate(targets) if labels[i]]
@@ -89,6 +90,7 @@ def query_article():
     index = int(request.form['index'])
     model = startup['curr_models'][request.form['model']]
     print(model)
+    import pdb; pdb.set_trace()
     results = startup['interface'].query_reports(model, startup['tab_reports'][index], query, is_nl=is_nl)
     threshold = .5
     tokenized_text = startup['tab_results'][index]['tokenized_text']

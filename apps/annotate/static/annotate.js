@@ -624,19 +624,19 @@ class ValidateState extends State {
     }
     chooseHTag(tag_selector) {
         var tag = tag_selector.node().options[tag_selector.node().selectedIndex].value;
-        var is_nl = tag == 'custom';
         var temp_this = this;
         if (this.selectHTag(tag_selector, "tag")) { return; }
         if (!(tag in this.cached_results) && tag != "default") {
-            this.queryReports(is_nl);
+            this.queryReports();
         } else {
             this.displayTag();
             this.switchToTagSentences();
         }
     }
-    queryReports(is_nl) {
+    queryReports() {
         var tag_selector = this.annotation_element.select("#tag");
         var tag = tag_selector.node().options[tag_selector.node().selectedIndex].value;
+        var is_nl = custom_tags.includes(tag);
         var url = 'http://localhost:5000/query';
         var formData = new FormData();
         formData.append("is_nl", is_nl);
