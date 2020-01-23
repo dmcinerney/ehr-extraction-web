@@ -93,10 +93,18 @@ class State {
         this.annotation_element.selectAll(".selectpicker.htag_selector").each(refresh_func);
     }
     refreshTagSelector(tag_selector) {
+        var selected_index = tag_selector.node().selectedIndex;
+        if (selected_index != -1) {
+            var tag = tag_selector.node().options[selected_index].value;
+        }
         if (tag_selector.classed("htag_selector")) {
             this.populateHTagSelector(tag_selector, hierarchy["options"][tag_selector.attr("parent")], this.disabled);
         } else {
             this.populateTagSelector(tag_selector, custom_tags.concat(this.tags).concat(Array.from(this.disabled)), this.disabled);
+        }
+        if (selected_index != -1) {
+            tag_selector.node().selectedIndex = tag_selector.select("#"+tag_selector.attr("id")+"_option_"+tag_idxs[tag]).attr("index");
+            $(tag_selector.node()).selectpicker('refresh');
         }
     }
     populateHTagSelector(tag_selector, tags, disabled=new Set([])) {

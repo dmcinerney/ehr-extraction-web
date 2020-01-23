@@ -90,7 +90,6 @@ def query_article():
     index = int(request.form['index'])
     model = startup['curr_models'][request.form['model']]
     print(model)
-    import pdb; pdb.set_trace()
     results = startup['interface'].query_reports(model, startup['tab_reports'][index], query, is_nl=is_nl)
     threshold = .5
     tokenized_text = startup['tab_results'][index]['tokenized_text']
