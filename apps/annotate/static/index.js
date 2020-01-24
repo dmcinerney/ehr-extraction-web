@@ -147,7 +147,12 @@ function closeLoader(selection) {
 function submit() {
     url = 'http://localhost:5000'
     var formData = new FormData();
-    formData.append("hello", "world");
+    formData.append("custom_tags", JSON.stringify(custom_tags));
+    formData.append("descriptions", JSON.stringify(descriptions));
+    formData.append("hierarchy", JSON.stringify(hierarchy));
+    Array.from(Object.keys(states)).forEach(function(e){
+        formData.append(e, JSON.stringify(states[e].getAnnotations()));
+    });
     $.post({
         url: url,
         data: formData,

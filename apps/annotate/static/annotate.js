@@ -22,6 +22,14 @@ class State {
         this.annotation_element.select("#htag0").attr("parent", hierarchy["start"]);
         this.refreshTagSelectors();
     }
+    getAnnotations() {
+        var tag_sentences = {};
+        var temp_this = this;
+        Array.from(Object.keys(this.tag_sentences)).forEach(function(e){
+            tag_sentences[e] = Array.from(temp_this.tag_sentences[e]);
+        });
+        return {'tag_sentences':tag_sentences};
+    }
     initReports(current_result) {
         this.current_result = current_result;
         this.populateReportSelector();
@@ -580,6 +588,11 @@ class ValidateState extends State {
         this.heatmap = "sentence_level_attention";
         this.cached_results = {};
         this.checked_senttags = {};
+    }
+    getAnnotations() {
+        var annotations = super.getAnnotations();
+        annotations['checked_senttags'] = this.checked_senttags;
+        return annotations;
     }
     selectSentence(sentence_text) {
         this.showAllSummaries();

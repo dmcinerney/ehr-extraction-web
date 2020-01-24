@@ -1,4 +1,5 @@
-from os.path import basename
+import json
+from os.path import basename, join, exists
 from . import app, startup
 from flask import request, render_template, send_file, make_response
 from werkzeug import secure_filename
@@ -25,8 +26,16 @@ def index():
     progress = startup['file_generator'].progress()
     num_instances = len(startup['file_generator'])
     file_from_server = "false" if startup["file"] is None else "true"
-    descriptions = startup['interface'].get_descriptions()
-    hierarchy = startup['interface'].get_hierarchy()
+    if exists(join(startup['annotations_dir'], 'global_info.pkl')):
+        with open(join(startup["annotations_dir"], 'global_info.pkl'), 'rb') as f:
+            global_info = pkl.load(f)
+        descriptions = global_info['descriptions']
+        hierarchy = global_info['hierarchy']
+        custom_tags = global_info['custom_tags']
+    else:
+        descriptions = startup['interface'].get_descriptions()
+        hierarchy = startup['interface'].get_hierarchy()
+        custom_tags = []
     file = basename(startup["file"]) if startup["file"] else False
     tabs = tabs
     return render_template(
@@ -36,13 +45,14 @@ def index():
         file_from_server=file_from_server,
         descriptions=descriptions,
         hierarchy=hierarchy,
+        custom_tags=custom_tags,
         file=file,
         tabs=tabs,
     )
 
 @app.route('/get_file', methods=['POST'])
 def get_file():
-    if startup["file"] is None:
+    if startup["file"] is None: # Not currently used
         f = request.files['reports']
         filename = 'uploads/' + secure_filename(f.filename)
         f.save(filename)
@@ -70,11 +80,18 @@ def get_file():
     patient_mrn = str(reports["patient_id"].iloc[0])
     return {"tab_results":startup['tab_results'], "patient_mrn":patient_mrn, "positive_targets":positive_targets}
 
+
+global_data = set(['custom_tags', 'descriptions', 'hierarchy'])
+
 @app.route('/', methods=['POST'])
 def annotate():
-    print(request.form)
+    form_data = {k:json.loads(v) for k,v in request.form.items()}
+    with open(join(startup["annotations_dir"], 'global_info.pkl'), 'wb') as f:
+        pkl.dump({k:form_data[k] for k in global_data}, f)
+    with open(join(startup["annotations_dir"], basename(startup["file"])), 'wb') as f:
+        pkl.dump({k if k not in startup['curr_models'].keys() else startup['curr_models'][k]:v for k,v in form_data.items() if k not in global_data}, f)
     # record annotations
-    if startup['file_generator'] is None:
+    if startup['file_generator'] is None: # not currently used
         startup['file'] = None
     else:
         try:
