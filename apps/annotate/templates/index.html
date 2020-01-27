@@ -25,6 +25,10 @@
       tag_idxs["custom"] = Object.keys(tag_idxs).length;
       var hierarchy = JSON.parse('{{ hierarchy | tojson | safe}}');
       var tabs = JSON.parse('{{ tabs | tojson | safe}}');
+      var positive_targets = [];
+      var future_tags = [];
+      var future_tabs = [];
+      var needs_refresh = new Set([]);
     </script>
     <script src="/static/annotate.js"></script>
     <script src="/static/index.js"></script>
@@ -44,9 +48,6 @@
     </div>
     <div>
       <text id="patient_mrn">Patient MRN:</text>
-    </div>
-    <div>
-      <text id="positive_targets"></text>
     </div>
     <div id="loader_div"></div>
     </div>

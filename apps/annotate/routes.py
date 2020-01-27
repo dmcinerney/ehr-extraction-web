@@ -7,12 +7,20 @@ import pandas as pd
 import pickle as pkl
 import random
 
+
+# tabs template:
+# (id, name, description, type, which_reports, valid_queries, with_custom, is_future)
+# type - 'validate' or 'annotate'
+# which_reports - Reports and corresponding results are stored in an array in the backend. This describes which index in the array that tab will display.  This will be static.
+# valid_queries - which queries are valid for this tab
+# with_custom - describes if the tab is allowed to use custom tags
+# is_future - describes if the tab annotates future reports or past
 @app.route('/', methods=['GET'])
 def index():
     print(startup['file'])
     tabs = [
-        ('future-reports', 'Future Reports', 'annotate the reports from the 12 month window after the first mr','annotate', 1, None, True),
-        ('past-reports', 'Past Reports', 'annotate the last (up to) 100 reports before the first mr', 'annotate', 0, None, True),
+        ('future-reports', 'Future Reports', 'annotate the reports from the 12 month window after the first mr','annotate', 1, None, True, True),
+        ('past-reports', 'Past Reports', 'annotate the last 1000 sentences before the first mr in the past reports', 'annotate', 0, None, True, False),
     ]
     models = startup['interface'].get_models()
     random.shuffle(models)
@@ -21,7 +29,7 @@ def index():
     for i,k in enumerate(models):
         valid_queries = startup['interface'].get_valid_queries(k)
         with_custom = startup['interface'].with_custom(k)
-        tabs.append(('model-%i-summaries' % (i+1), 'Model %i Summaries' % (i+1), 'validate the model summaries of the past reports', 'validate', 0, valid_queries, with_custom))
+        tabs.append(('model-%i-summaries' % (i+1), 'Model %i Summaries' % (i+1), 'validate the model summaries of the past reports', 'validate', 0, valid_queries, with_custom, False))
         startup['curr_models']['model-%i-summaries' % (i+1)] = k
     progress = startup['file_generator'].progress()
     num_instances = len(startup['file_generator'])

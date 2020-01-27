@@ -18,9 +18,15 @@ function setProgress() {
 function onReady() {
     d3.selectAll(".panel_vis").each(function(d){
       if (d[3] == 'annotate') {
-          states[d[0]] = new AnnotateState(d3.select(this), d[5], d[6]);
+          states[d[0]] = new AnnotateState(d3.select(this), d[5], d[6], d[7]);
       } else {
-          states[d[0]] = new ValidateState(d3.select(this), d[5], d[6]);
+          states[d[0]] = new ValidateState(d3.select(this), d[5], d[6], d[7]);
+      }
+      if (d[7]) {
+          if (future_tabs.length > 0) {
+              alert("ERROR: cannot have more than one future tabs!");
+          }
+          future_tabs.push(d[0])
       }});
     if (file_from_server) {
         getFile();
@@ -31,7 +37,7 @@ function onReportsLoaded(tab_results) {
     d3.selectAll(".panel_vis")
       .each(function(d){
         var state = states[d[0]];
-        state.initReports(tab_results[d[4]]); });
+        state.initWithResult(tab_results[d[4]]); });
 }
 
 function populateTabs(){
@@ -49,6 +55,17 @@ function populateTabs(){
           .attr("role", "tab")
           .attr("aria-controls", function(d){ return d[0]+"-panel"; })
           .attr("aria-selected", function(d, i){ return String(i == 0); })
+          .each(function(){
+            $(this).on("click", function(e){
+                e.preventDefault();
+                var id = d3.select(this).attr("id");
+                var tab = id.slice(0, id.length-4);
+                console.log("showing "+tab);
+                if (needs_refresh.has(tab)) {
+                    refreshTab(tab);
+                }
+                $(this).tab('show');
+            }); })
           .html(function(d){ return d[1]; });
     d3.select("#panels").html("");
     tab_panels = d3.select("#panels").selectAll("div")
@@ -124,7 +141,7 @@ function getFile() {
         success: function(result, status){
             d3.select("#patient_mrn").html("Patient MRN: "+result["patient_mrn"]);
             if ("positive_targets" in result) {
-                d3.select("#positive_targets").html("Positive Targets: "+result["positive_targets"]);
+                positive_targets = result["positive_targets"];
             }
             onReportsLoaded(result["tab_results"]);
             closeLoader(d3.select("#loader_div"));
@@ -173,11 +190,18 @@ function addCustomTag(description, parent_tag=false) {
     if (!parent_tag) {
         parent_tag = hierarchy['start'];
     }
-    hierarchy['options'][parent_tag].unshift(tagname);
+    hierarchy['options'][parent_tag].push(tagname);
     hierarchy['options'][tagname] = [];
     hierarchy['parents'][tagname] = parent_tag;
     hierarchy['options'][parent_tag].forEach(function(e, i){ hierarchy['indices'][e] = i; })
-    Array.from(Object.values(states)).forEach(function(e){ if (e.with_custom){e.refreshTagSelectors();} });
+    Array.from(Object.keys(states)).forEach(function(e){
+        if (states[e].with_custom){
+            needs_refresh.add(e);
+            if (d3.select("#"+e+"-tab").classed("active")) {
+                refreshTab(e);
+            }
+        }
+    });
 }
 
 function linearize(tag) {
@@ -187,4 +211,23 @@ function linearize(tag) {
         tag = hierarchy['parents'][tag];
     }
     return indices;
+}
+
+function updateFutureTags() {
+    var tag_sentences = states[future_tabs[0]].tag_sentences;
+    future_tags = Object.keys(tag_sentences).filter(function(e){ return tag_sentences[e].size > 0; });
+    Array.from(Object.keys(states)).forEach(function(e){
+        if (!(states[e].is_future)){
+            needs_refresh.add(e);
+            if (d3.select("#"+e+"-tab").classed("active")) {
+                refreshTab(e);
+            }
+        }
+    });
+}
+
+
+function refreshTab(tab) {
+    states[tab].refreshTagSelectors();
+    needs_refresh.remove(tab);
 }

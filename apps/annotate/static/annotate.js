@@ -1,5 +1,5 @@
 class State {
-    constructor(annotation_element, valid_queries, with_custom) {
+    constructor(annotation_element, valid_queries, with_custom, is_future) {
         this.annotation_element = annotation_element;
         if (!valid_queries) {
             this.tags = Object.keys(descriptions);
@@ -11,6 +11,7 @@ class State {
             this.disabled = new Set([...alltags].filter(x => !tags.has(x)));
         }
         this.with_custom = with_custom;
+        this.is_future = is_future;
         this.tag_sentences = {};
         this.sentence_tags = {};
         this.selected_sentence = null;
@@ -20,7 +21,6 @@ class State {
         this.switchToTagSentences();
         this.htags = {};
         this.annotation_element.select("#htag0").attr("parent", hierarchy["start"]);
-        this.refreshTagSelectors();
     }
     getAnnotations() {
         var tag_sentences = {};
@@ -30,11 +30,12 @@ class State {
         });
         return {'tag_sentences':tag_sentences};
     }
-    initReports(current_result) {
+    initWithResult(current_result) {
         this.current_result = current_result;
         this.populateReportSelector();
         this.makeReports();
         this.chooseReport();
+        this.refreshTagSelectors();
     }
     switchToTagSentences(){
         this.annotation_element.select("#tag_sentences").classed("selected", true);
@@ -68,6 +69,9 @@ class State {
         }
     }
     refreshSummary() {
+        if (this.is_future) {
+            updateFutureTags();
+        }
         this.displayTokenizedSummary();
         if (this.selected_sentence) { this.displaySentenceTags(this.selected_sentence); }
         this.boldTags();
@@ -106,16 +110,36 @@ class State {
             var tag = tag_selector.node().options[selected_index].value;
         }
         if (tag_selector.classed("htag_selector")) {
-            this.populateHTagSelector(tag_selector, hierarchy["options"][tag_selector.attr("parent")], this.disabled);
+            var tag_groups = ["Custom Tags", "Other Tags"];
+            var options = hierarchy["options"][tag_selector.attr("parent")];
+            var custom_tags_set = new Set(custom_tags);
+            var tags = {
+                "Custom Tags": options.filter(function(e){ return (custom_tags_set.has(e)); }),
+                "Other Tags" : options.filter(function(e){ return !(custom_tags_set.has(e)); }),
+            };
+            this.populateHTagSelector(tag_selector, tag_groups, tags, this.disabled);
         } else {
-            this.populateTagSelector(tag_selector, custom_tags.concat(this.tags).concat(Array.from(this.disabled)), this.disabled);
+            if (this.is_future) {
+                var interesting_tag_group = ["Positive Tags", positive_targets];
+            } else {
+                var interesting_tag_group = ["Future Tags", future_tags];
+            }
+            var interesting_tag_set = new Set(interesting_tag_group[1]);
+            var tag_groups = [interesting_tag_group[0], "Custom Tags", "Other Tags"];
+            var tags = {
+                "Custom Tags": custom_tags.filter(function(e){ return !(interesting_tag_set.has(e)); }),
+                "Other Tags" : this.tags.concat(Array.from(this.disabled)).filter(function(e){ return !(interesting_tag_set.has(e)); }),
+            };
+            tags[interesting_tag_group[0]] = Array.from(interesting_tag_group[1]);
+            this.populateTagSelector(tag_selector, tag_groups, tags, this.disabled);
         }
         if (selected_index != -1) {
             tag_selector.node().selectedIndex = tag_selector.select("#"+tag_selector.attr("id")+"_option_"+tag_idxs[tag]).attr("index");
             $(tag_selector.node()).selectpicker('refresh');
         }
     }
-    populateHTagSelector(tag_selector, tags, disabled=new Set([])) {
+    populateHTagSelector(tag_selector, tag_groups, tags, disabled=new Set([])) {
+        var option_values = this.populateTagSelector(tag_selector, tag_groups, tags, disabled);
 //        $(tag_selector).on("hidden.bs.select", function(){ $(this).trigger("changed.bs.select"); });
         if (!(tag_selector.attr("base_id") in this.htags)) {
             this.htags[tag_selector.attr("base_id")] = [];
@@ -126,13 +150,13 @@ class State {
         var temp_this = this;
         tag_selector.attr("selecting_children", "false");
         $(tag_selector.node()).on("shown.bs.select", function(){
-          d3.select("div.dropdown-menu.show").selectAll("li")
+          d3.select("div.dropdown-menu.show").selectAll("li").filter(function(){
+            return !(d3.select(this).classed("dropdown-divider") || d3.select(this).classed("dropdown-header")); })
             .each(function(d, i){
               d3.select(this).classed("disabled", false)
                 .select("a").on("click", function(){ if(tag_selector.node().selectedIndex == i){tag_selector.on("change").bind(tag_selector.node())();} });
-              var tag_idx = i;
-              if (temp_this.with_custom){ tag_idx = tag_idx-1; }
-              if (tag_idx <= 0 || !(tags[tag_idx-1] in hierarchy["options"])){ return; }
+              var value = option_values[i];
+              if (!(value in hierarchy["options"])){ return; }
               // add button
               d3.select(this).selectAll("button")
                 .data([0])
@@ -150,21 +174,21 @@ class State {
                       $(tag_selector.node()).selectpicker('refresh');
                       tag_selector.attr("selecting_children", "true");
                       console.log("clicked arrow");
-                      tag_selector.on("change").bind(tag_selector.node())();
-              });
+                      tag_selector.on("change").bind(tag_selector.node())(); });
             });
           });
-        this.populateTagSelector(tag_selector, tags, disabled);
     }
-    populateTagSelector(tag_selector, tags, disabled=new Set([])) {
+    populateTagSelector(tag_selector, tag_groups, tags, disabled=new Set([])) {
         tag_selector.attr("data-container", "body");
         tag_selector.html("");
+        var option_values = [];
         tag_selector.append("option")
           .attr("value", "default")
           .attr("index", 0)
           .attr("id", tag_selector.attr("id")+"_option_"+tag_idxs["default"])
           .html(tag_selector.attr("default"))
           .attr("disabled", true);
+        option_values.push("default")
         if (this.with_custom) {
             tag_selector.append("option")
               .attr("value", "custom")
@@ -172,21 +196,34 @@ class State {
               .attr("index", 1)
               .attr("id", tag_selector.attr("id")+"_option_"+tag_idxs["custom"])
               .html("Add a Custom Tag: \"\"");
+            option_values.push("custom")
         }
         var temp_this = this;
-        tag_selector.selectAll(".tags")
-          .data(tags)
+        tag_groups = tag_groups.filter(function(e){ return tags[e].length > 0; });
+        if (tag_groups.length != 1) {
+            var optgroup = tag_selector.selectAll("optgroup")
+              .data(tag_groups)
+              .enter()
+              .append("optgroup")
+                .attr("label", function(d){ return d; })
+                .selectAll("option")
+                .data(function(d){ return tags[d]; });
+        } else {
+            var optgroup = tag_selector.selectAll(".tags")
+              .data(tags[tag_groups[0]]);
+        }
+        optgroup
           .enter()
           .append("option")
-            .attr("value", function(d) { return d; })
-            .attr("description", function(d) { return descriptions[d]; })
-            .attr("index", function(d, i) {
-              if (temp_this.with_custom) { i = i+1; }
-              return i+1; })
-            .attr("id", function(d) { return tag_selector.attr("id")+"_option_"+tag_idxs[d]; })
-            .each(function(d){
-              if (disabled.has(d)) { d3.select(this).attr("disabled", "true"); }; })
-            .html(getTagString);
+          .attr("value", function(d) { return d; })
+          .attr("description", function(d) { return descriptions[d]; })
+          .attr("index", function(d) {
+            option_values.push(d);
+            return option_values.length-1; })
+          .attr("id", function(d) { return tag_selector.attr("id")+"_option_"+tag_idxs[d]; })
+          .each(function(d){
+            if (disabled.has(d)) { d3.select(this).attr("disabled", "true"); }; })
+          .html(getTagString);
         $(tag_selector.node()).selectpicker('refresh');
         if (this.with_custom) {
 //            $(d3.select("div.dropdown-menu.show").select(".bs-searchbox").select("input").node()).on("input", function() {
@@ -200,6 +237,7 @@ class State {
                   $(this).trigger("input");
               }});
         }
+        return option_values;
     }
     populateReportSelector() {
         this.annotation_element.select("#report")
@@ -236,6 +274,7 @@ class State {
         // Add anything in orginal report before the sentence
         divs_for_sentence_and_in_between
           .append("text")
+            .style("color", "#b5b5b5")
             .html(function(d, i) {
               if (i == 0) {
                   var start = 0;
@@ -262,14 +301,15 @@ class State {
         // Add anything in original report after the last sentence
         report_p.append("div")
           .append("text")
-          .html(function(d, i) {
-            if (temp_this.current_result.sentence_spans[i].length <= 0) {
-                return temp_this.current_result.original_reports[i][3]
-            }
-            var start = temp_this.current_result.sentence_spans[i][temp_this.current_result.sentence_spans[i].length-1][2];
-            var end = temp_this.current_result.original_reports[i][3].length;
-            var raw_text = temp_this.current_result.original_reports[i][3].slice(start, end);
-            return raw_text.replace(/\n/g, "<br />"); });
+            .style("color", "#b5b5b5")
+            .html(function(d, i) {
+              if (temp_this.current_result.sentence_spans[i].length <= 0) {
+                  return temp_this.current_result.original_reports[i][3]
+              }
+              var start = temp_this.current_result.sentence_spans[i][temp_this.current_result.sentence_spans[i].length-1][2];
+              var end = temp_this.current_result.original_reports[i][3].length;
+              var raw_text = temp_this.current_result.original_reports[i][3].slice(start, end);
+              return raw_text.replace(/\n/g, "<br />"); });
     }
     selectSentence(sentence_text) {
         sentence_text.interrupt("highlightMomentarily");
@@ -460,7 +500,6 @@ class State {
                   $(next_tag_selector.node()).selectpicker('toggle'); });
             }
             this.refreshTagSelector(next_tag_selector);
-//            this.populateHTagSelector(next_tag_selector, options, this.disabled);
         }
     }
     displayTag() {
@@ -531,8 +570,8 @@ class State {
 }
 
 class AnnotateState extends State{
-    constructor(annotation_element, valid_queries, with_custom) {
-        super(annotation_element, valid_queries, with_custom);
+    constructor(annotation_element, valid_queries, with_custom, is_future) {
+        super(annotation_element, valid_queries, with_custom, is_future);
         var temp_this = this;
         var sentence_tag = this.annotation_element.select("#sentence_tags").append("select")
           .attr("class", "selectpicker tag_selector")
@@ -583,8 +622,8 @@ class AnnotateState extends State{
 
 
 class ValidateState extends State {
-    constructor(validation_element, valid_queries, with_custom) {
-        super(validation_element, valid_queries, with_custom);
+    constructor(validation_element, valid_queries, with_custom, is_future) {
+        super(validation_element, valid_queries, with_custom, is_future);
         this.heatmap = "sentence_level_attention";
         this.cached_results = {};
         this.checked_senttags = {};
