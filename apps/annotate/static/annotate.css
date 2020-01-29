@@ -149,14 +149,6 @@ body {
     display: none;
 }
 
-#sentence_tags {
-    display: none;
-}
-
-#tag_sentences {
-    display: none;
-}
-
 .report_p.selected {
     display: block;
 }
@@ -165,13 +157,13 @@ body {
     display: block;
 }
 
-#sentence_tags.selected {
+#sentence_tags {
     min-height: 0;
     display: flex;
     flex-direction: column;
 }
 
-#tag_sentences.selected {
+#tag_sentences {
     min-height: 0;
     display: flex;
     flex-direction: column;

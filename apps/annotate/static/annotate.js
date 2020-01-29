@@ -18,7 +18,6 @@ class State {
         this.report_selected_sentences = {};
         this.current_result = null;
         this.addOnClicks();
-        this.switchToTagSentences();
         this.htags = {};
         this.annotation_element.select("#htag0").attr("parent", hierarchy["start"]);
     }
@@ -37,13 +36,8 @@ class State {
         this.chooseReport();
         this.refreshTagSelectors();
     }
-    switchToTagSentences(){
-        this.annotation_element.select("#tag_sentences").classed("selected", true);
-        this.annotation_element.select("#sentence_tags").classed("selected", false);
-    }
     switchToSentenceTags(){
-        this.annotation_element.select("#tag_sentences").classed("selected", false);
-        this.annotation_element.select("#sentence_tags").classed("selected", true);
+        $(this.annotation_element.select("#sentence_tags_modal").node()).modal('show');
     }
     tagSentence(i, tag, refresh=true){
         if (tag == 'default') {
@@ -329,11 +323,11 @@ class State {
     }
     displaySentenceTags(i) {
         var sentence_tags = this.annotation_element.select("#sentence_tags");
-        var sentence_header = sentence_tags.select("#sentenceheader").selectAll("div").data(this.current_result.tokenized_text[i]);
+        var sentence_header = this.annotation_element.select("#sentenceheader").selectAll("div").data(this.current_result.tokenized_text[i]);
         sentence_header.exit().remove();
         sentence_header.enter().append("div").style("display", "inline").each(displayTokenizedSentence);
         sentence_header.each(displayTokenizedSentence);
-        var sentence_tags_list = sentence_tags.select(".custom_text").select("ul").html("");
+        var sentence_tags_list = sentence_tags.select("ul").html("");
         var temp_this = this;
         var list_item = sentence_tags_list.selectAll("li")
           .data(function(){
@@ -416,7 +410,6 @@ class State {
         var temp_this = this;
         this.selectTag(this.annotation_element.select("#tag"), "htag");
         this.displayTag();
-        this.switchToTagSentences();
     }
     selectTag(tag_selector, htag_selector_id) {
         var tag = tag_selector.node().options[tag_selector.node().selectedIndex].value;
@@ -451,7 +444,6 @@ class State {
         var temp_this = this;
         if (!(this.selectHTag(tag_selector, "tag"))) {
             this.displayTag();
-            this.switchToTagSentences();
         }
     }
     selectHTag(htag_selector, tag_selector_id) {
@@ -603,7 +595,6 @@ class AnnotateState extends State{
         tag_selector.node().selectedIndex = 0;
         $(tag_selector.node()).selectpicker("refresh");
         this.selectTag(tag_selector, "sentence_htag");
-        this.switchToSentenceTags();
     }
     addSentenceHTag(tag_selector) {
         var temp_this = this;
@@ -615,7 +606,6 @@ class AnnotateState extends State{
             tag_selector.node().selectedIndex = 0;
             $(tag_selector.node()).selectpicker("refresh");
             this.selectHTag(tag_selector, "sentence_tag");
-            this.switchToSentenceTags();
         }
     }
 }
@@ -679,7 +669,6 @@ class ValidateState extends State {
             this.queryReports();
         } else {
             this.displayTag();
-            this.switchToTagSentences();
         }
     }
     chooseHTag(tag_selector) {
@@ -690,7 +679,6 @@ class ValidateState extends State {
             this.queryReports();
         } else {
             this.displayTag();
-            this.switchToTagSentences();
         }
     }
     queryReports() {
@@ -721,7 +709,6 @@ class ValidateState extends State {
                 temp_this.cached_results[tag] = result;
                 temp_this.tagAllSentences(tag);
                 temp_this.displayTag();
-                temp_this.switchToTagSentences();
                 closeLoader(d3.select("#loader_div"));
             },
             processData: false,
