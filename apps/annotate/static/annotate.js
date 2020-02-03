@@ -71,9 +71,7 @@ class State {
         }
         this.displayTagSentences();
         if (this.selected_sentence) { this.displaySentenceTags(this.selected_sentence); }
-        var temp_this = this;
-        var bold_tags = new Set(Object.keys(this.tag_sentences).filter(function(e){ temp_this.tag_sentences[e].size > 0; }));
-        this.boldTags(this.annotation_element.select("#tag"), bold_tags);
+        this.styleTags(this.annotation_element.select("#tag"));
         this.boldReports();
     }
     untagSentence(i, tag, refresh=true) {
@@ -131,11 +129,7 @@ class State {
             };
             tags[interesting_tag_group[0]] = Array.from(interesting_tag_group[1]);
             this.populateTagSelector(tag_selector, tag_groups, tags, this.disabled);
-            if (tag_selector.attr("id") == "tag") {
-                var temp_this = this;
-                var bold_tags = new Set(Object.keys(this.tag_sentences).filter(function(e){ temp_this.tag_sentences[e].size > 0; }));
-                this.boldTags(this.annotation_element.select("#tag"), bold_tags);
-            }
+            this.styleTags(this.annotation_element.select("#tag"));
         }
         if (selected_index != -1) {
             tag_selector.node().selectedIndex = tag_selector.select("#"+tag_selector.attr("id")+"_option_"+tag_idxs[tag]).attr("index");
@@ -559,16 +553,19 @@ class State {
     sortNumber(a, b) {
         return a - b;
     }
-    boldTags(tag_selector, tags) {
-        var temp_this = this;
-        tag_selector.selectAll("option").classed("bold_option", function(){
-          var tag = d3.select(this).attr("value");
-          if (tag == "default") {
-              return false;
-          } else {
-              return tags.has(tag);
-          }});
-        $(tag_selector).selectpicker('refresh');
+    styleTags(tag_selector) {
+        if (tag_selector.attr("id") == "tag") {
+            var temp_this = this;
+            var bold_tags = new Set(Object.keys(this.tag_sentences).filter(function(e){ return temp_this.tag_sentences[e].size > 0; }));
+            tag_selector.selectAll("option").classed("bold_option", function(){
+              var tag = d3.select(this).attr("value");
+              if (tag == "default") {
+                  return false;
+              } else {
+                  return bold_tags.has(tag);
+              }});
+            $(tag_selector).selectpicker('refresh');
+        }
     }
     boldReports() {
         var temp_this = this;
