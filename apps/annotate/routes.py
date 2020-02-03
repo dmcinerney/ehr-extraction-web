@@ -116,10 +116,14 @@ def query_article():
     model = startup['curr_models'][request.form['model']]
     print(model)
     results = startup['interface'].query_reports(model, startup['tab_reports'][index], query, is_nl=is_nl)
-    threshold = .5
     tokenized_text = startup['tab_results'][index]['tokenized_text']
-    extracted = {k:[i for i,sent in enumerate(tokenized_text[:len(results['heatmaps'][k])]) if sum(results['heatmaps'][k][i]) > threshold] for k in results['heatmaps'].keys()}
+#    threshold = .5
+#    extracted = {k:[i for i,sent in enumerate(tokenized_text[:len(results['heatmaps'][k])]) if sum(results['heatmaps'][k][i]) > threshold] for k in results['heatmaps'].keys()}
+    extracted = {k:topk([(i,sum(results['heatmaps'][k][i])) for i,sent in enumerate(tokenized_text[:len(results['heatmaps'][k])])], 10) for k in results['heatmaps'].keys()}
     results['extracted'] = extracted
     if 'score' in results.keys():
         print(results['score'])
     return results
+
+def topk(index_score_list, k):
+    return [i for i,s in sorted(index_score_list, key=lambda x: -x[1])[:k] if s > 0]

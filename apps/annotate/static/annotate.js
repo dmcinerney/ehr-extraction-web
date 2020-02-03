@@ -36,13 +36,16 @@ class State {
         this.chooseReport();
         this.refreshTagSelectors();
     }
-    switchToSentenceTags(){
+    closeSentenceTagsModal(){
+        $(this.annotation_element.select("#sentence_tags_modal").node()).modal('hide');
+    }
+    openSentenceTagsModal(){
         $(this.annotation_element.select("#sentence_tags_modal").node()).modal('show');
     }
     tagSentence(i, tag, refresh=true){
         if (tag == 'default') {
             this.selected_sentence = i;
-            this.switchToSentenceTags();
+            this.openSentenceTagsModal();
             this.displaySentenceTags(i);
         } else {
             if (this.tag_sentences[tag] != null && this.tag_sentences[tag].has(i)) {
@@ -66,9 +69,11 @@ class State {
         if (this.is_future) {
             updateFutureTags();
         }
-        this.displayTokenizedSummary();
+        this.displayTagSentences();
         if (this.selected_sentence) { this.displaySentenceTags(this.selected_sentence); }
-        this.boldTags();
+        var temp_this = this;
+        var bold_tags = new Set(Object.keys(this.tag_sentences).filter(function(e){ temp_this.tag_sentences[e].size > 0; }));
+        this.boldTags(this.annotation_element.select("#tag"), bold_tags);
         this.boldReports();
     }
     untagSentence(i, tag, refresh=true) {
@@ -126,6 +131,11 @@ class State {
             };
             tags[interesting_tag_group[0]] = Array.from(interesting_tag_group[1]);
             this.populateTagSelector(tag_selector, tag_groups, tags, this.disabled);
+            if (tag_selector.attr("id") == "tag") {
+                var temp_this = this;
+                var bold_tags = new Set(Object.keys(this.tag_sentences).filter(function(e){ temp_this.tag_sentences[e].size > 0; }));
+                this.boldTags(this.annotation_element.select("#tag"), bold_tags);
+            }
         }
         if (selected_index != -1) {
             tag_selector.node().selectedIndex = tag_selector.select("#"+tag_selector.attr("id")+"_option_"+tag_idxs[tag]).attr("index");
@@ -161,19 +171,24 @@ class State {
                     .each(function(){
                       var listitem = d3.select(this.parentNode)
                         .style("padding-right", function(){
-                          console.log((parseInt(window.getComputedStyle(d3.select(this).node(), null).getPropertyValue('padding-right'))+30)+"px");
                           return (parseInt(window.getComputedStyle(d3.select(this).node(), null).getPropertyValue('padding-right'))+30)+"px"; }); })
                     .on("click", function(){
                       tag_selector.node().selectedIndex = i;
                       $(tag_selector.node()).selectpicker('refresh');
                       tag_selector.attr("selecting_children", "true");
-                      console.log("clicked arrow");
                       tag_selector.on("change").bind(tag_selector.node())(); });
             });
           });
     }
     populateTagSelector(tag_selector, tag_groups, tags, disabled=new Set([])) {
-        tag_selector.attr("data-container", "body");
+        //$(tag_selector.node()).on("show.bs.select", function(){console.log("show.bs.select");});
+        //$(tag_selector.node()).on("shown.bs.select", function(){console.log("shown.bs.select");});
+        //$(tag_selector.node()).on("hide.bs.select", function(){console.log("hide.bs.select");});
+        //$(tag_selector.node()).on("hidden.bs.select", function(){console.log("hidden.bs.select");});
+        //$(tag_selector.node()).on("loaded.bs.select", function(){console.log("loaded.bs.select");});
+        //$(tag_selector.node()).on("rendered.bs.select", function(){console.log("rendered.bs.select");});
+        //$(tag_selector.node()).on("refreshed.bs.select", function(){console.log("refreshed.bs.select");});
+        //$(tag_selector.node()).on("changed.bs.select", function(){console.log("changed.bs.select");});
         tag_selector.html("");
         var option_values = [];
         tag_selector.append("option")
@@ -219,6 +234,7 @@ class State {
             if (disabled.has(d)) { d3.select(this).attr("disabled", "true"); }; })
           .html(getTagString);
         $(tag_selector.node()).selectpicker('refresh');
+        //$(tag_selector.node()).on('loaded.bs.select', function(){$(tag_selector.node()).selectpicker('refresh');});
         if (this.with_custom) {
 //            $(d3.select("div.dropdown-menu.show").select(".bs-searchbox").select("input").node()).on("input", function() {
             $("#"+tag_selector.attr("id")+" ~ div.dropdown-menu:first > div.bs-searchbox > input", this.annotation_element.node()).on("input", function() {
@@ -287,7 +303,7 @@ class State {
             .attr("selected", "false")
             .attr("class", "reports_sentence")
             .attr("report_id", function(d) { return d[0]; })
-            .on("click", function() { temp_this.selectSentence(d3.select(this));console.log(d3.select(this).attr("sentence")); })
+            .on("click", function() { temp_this.selectSentence(d3.select(this)); })
             .html(function(d) {
               var raw_text = temp_this.current_result.original_reports[d[0]][3].slice(d[1][1], d[1][2]);
               return raw_text.replace(/\n/g, "<br />"); });
@@ -350,35 +366,74 @@ class State {
             temp_this.annotation_element.select("#tag").node().selectedIndex = temp_this.annotation_element.select("#tag_option_"+tag_idxs[tag]).attr("index");
             $(temp_this.annotation_element.select("#tag").node()).selectpicker('refresh');
             temp_this.chooseTag();
+            temp_this.closeSentenceTagsModal();
             var sentence_num = d3.select(this.parentNode).attr("sentence");
             var sentence = temp_this.annotation_element.select("#summary_sentence_"+tag_idxs[tag]+"_"+sentence_num);
             sentence.node().scrollIntoView({block: "center"});
             temp_this.highlightMomentarily(sentence.select(".summary_sentence_text")); });
         this.addAnnotationButton(list_item);
     }
-    displayTokenizedSummary() {
+    displayTagSentences() {
         var temp_this = this;
         var tag_sentences_div = this.annotation_element.select("#tag_sentences").select(".custom_text");
         tag_sentences_div.html("");
-        var summary_p = tag_sentences_div.selectAll("p")
+        var summary_div = tag_sentences_div.append("div")
+          .attr("id", temp_this.annotation_element.attr("id")+"_tag_sentences_accordian")
+          .selectAll("div.card")
           .data(Object.keys(this.tag_sentences))
           .enter()
-          .append("p")
-            .attr("class", "summary_p")
+          .append("div")
+            .attr("class", "card summary_div")
             .attr("tag", function(d) { return d; })
             .attr("id", function(d) { return "t_"+tag_idxs[d]; });
-        summary_p.append("p")
-          .attr("class", "tagheader")
-          .html(getTagString);
-        var sentence_p = summary_p.selectAll(".summary_sentence")
+        summary_div.append("div")
+          .attr("class", "card-header")
+          .attr("id", function(d){ return temp_this.annotation_element.attr("id")+"_t_"+tag_idxs[d]+"_header"; })
+          .append("h2")
+            .attr("class", "mb-0")
+            .append("button")
+              .attr("class", "btn btn-link")
+              .attr("type", "button")
+              .attr("data-toggle", "collapse")
+              .attr("data-target", function(d){ return "#"+temp_this.annotation_element.attr("id")+"_t_"+tag_idxs[d]+"_body"; })
+              .attr("aria-expanded", function(d){
+                   var tag_selector = temp_this.annotation_element.select("#tag").node();
+                   var tag = tag_selector.options[tag_selector.selectedIndex].value;
+                   return d == tag; })
+              .attr("aria-controls", function(d){ return temp_this.annotation_element.attr("id")+"_t_"+tag_idxs[d]+"_body"; })
+              .on("click", function(){
+                  if (!(d3.select(this.parentNode.parentNode.parentNode).select("div.collapse").classed("show"))) {
+                      var tag = d3.select(this.parentNode.parentNode.parentNode).attr("tag");
+                      temp_this.annotation_element.select("#tag").node().selectedIndex = temp_this.annotation_element.select("#tag_option_"+tag_idxs[tag]).attr("index");
+                      $(temp_this.annotation_element.select("#tag").node()).selectpicker('refresh');
+                      temp_this.chooseTag();
+                  } else {
+                      temp_this.deselect();
+                  }
+              })
+              .append("text")
+                .attr("class", "tagheader")
+                .html(getTagString);
+        var summary_ul = summary_div.append("div")
+          .attr("id", function(d){ return temp_this.annotation_element.attr("id")+"_t_"+tag_idxs[d]+"_body"; })
+          .attr("class", "collapse")
+          .classed("show", function(d){
+              var tag_selector = temp_this.annotation_element.select("#tag").node();
+              var tag = tag_selector.options[tag_selector.selectedIndex].value;
+              return d == tag; })
+          .attr("aria-labelledby", function(d){ return temp_this.annotation_element.attr("id")+"_t_"+tag_idxs[d]+"_header"; })
+          .attr("data-parent", "#"+temp_this.annotation_element.attr("id")+"_tag_sentences_accordian")
+          .append("ul")
+            .attr("class", "card-body")
+        var sentence_li = summary_ul.selectAll(".summary_sentence")
           .data(function(d) { return Array.from(temp_this.tag_sentences[d]).sort(function(a,b){return temp_this.sortNumber(a, b);}).map(function(e){ return [d, e]; }); })
           .enter()
-          .append("p")
+          .append("li")
             .attr("class", "summary_sentence")
             .attr("id", function(d) { return "summary_sentence_"+tag_idxs[d[0]]+"_"+d[1]; })
             .attr("tag", function(d) { return d[0]; })
             .attr("sentence", function(d) { return d[1]; });
-        sentence_p.append("div")
+        sentence_li.append("div")
           .attr("class", "summary_sentence_text")
           .on("click", function() {
             var sentence_num = d3.select(this.parentNode).attr("sentence");
@@ -393,7 +448,7 @@ class State {
           .append("div")
             .style("display", "inline")
             .each(displayTokenizedSentence);
-        this.addAnnotationButton(sentence_p);
+        this.addAnnotationButton(sentence_li);
         this.displayTag();
     }
     addAnnotationButton(senttag_container) {
@@ -427,7 +482,6 @@ class State {
                 tag = "custom"+custom_tags.length;
             }
             var linearization = linearize(tag);
-            console.log(linearization);
             var node = hierarchy["start"];
             for (var i = 0; i < linearization.length; i++) {
                 var tag_selector = htags[i];
@@ -471,7 +525,6 @@ class State {
             //d3.select(last_tag_selector.node().parentNode).remove();
             $(last_tag_selector.node()).selectpicker('destroy');
             last_tag_selector.remove();
-            console.log("removing "+i);
         }
         var tag = tag_selector.node().options[tag_selector.node().selectedIndex].value;
         if (tag in hierarchy["options"]){
@@ -484,9 +537,9 @@ class State {
               .attr("id", base_id+(num+1))
               .attr("parent", tag)
               .attr("default", tag_selector.attr("default"))
+              .attr("data-container", tag_selector.attr("data-container"))
               .on("change", tag_selector.on("change"));
             if (open_after) {
-                console.log("selecting_children");
                 tag_selector.attr("selecting_children", "false");
                 $(next_tag_selector.node()).on("loaded.bs.select", function(){
                   $(next_tag_selector.node()).selectpicker('toggle'); });
@@ -498,26 +551,24 @@ class State {
         var tag_selector = this.annotation_element.select("#tag").node();
         var tag = tag_selector.options[tag_selector.selectedIndex].value;
         if (tag == "default") {
-            this.annotation_element.selectAll(".summary_p")
-              .classed("selected", true);
+            this.annotation_element.selectAll(".summary_div").select("div.collapse.show").each(function(){$(this).collapse('hide');});
         } else {
-            this.annotation_element.selectAll(".summary_p")
-              .classed("selected", function() { return d3.select(this).attr("tag") == tag; });
+            this.annotation_element.select("#"+this.annotation_element.attr("id")+"_t_"+tag_idxs[tag]+"_body").each(function(){$(this).collapse('show');});
         }
     }
     sortNumber(a, b) {
         return a - b;
     }
-    boldTags() {
+    boldTags(tag_selector, tags) {
         var temp_this = this;
-        this.annotation_element.select("#tag").selectAll("option").classed("bold_option", function(){
+        tag_selector.selectAll("option").classed("bold_option", function(){
           var tag = d3.select(this).attr("value");
           if (tag == "default") {
               return false;
           } else {
-              return temp_this.tag_sentences[tag] != null && temp_this.tag_sentences[tag].size > 0;
-          }})
-        $("#tag", this.annotation_element.node()).selectpicker('refresh');
+              return tags.has(tag);
+          }});
+        $(tag_selector).selectpicker('refresh');
     }
     boldReports() {
         var temp_this = this;
@@ -544,10 +595,9 @@ class State {
         this.annotation_element.select("#report").node().selectedIndex = this.annotation_element.select("#report").node().selectedIndex-1;
         this.chooseReport();
     }
-    showAllSummaries() {
-        var tag_selector = this.annotation_element.select("#tag");
-        tag_selector.node().selectedIndex = 0;
-        $(tag_selector.node()).selectpicker("refresh");
+    deselect() {
+        this.annotation_element.select("#tag").node().selectedIndex = 0;
+        $(this.annotation_element.select("#tag").node()).selectpicker('refresh');
         this.chooseTag();
     }
     addOnClicks() {
@@ -557,7 +607,7 @@ class State {
         this.annotation_element.select("#next").on("click", function(){ temp_this.nextReport(); })
         this.annotation_element.select("#tag").on("change", function(){ temp_this.chooseTag(); });
         this.annotation_element.select("#htag0").on("change", function(){ temp_this.chooseHTag(d3.select(this)); });
-        this.annotation_element.select("#show_all").on("click", function(){ temp_this.showAllSummaries(); });
+        this.annotation_element.select("#deselect").on("click", function(){ temp_this.deselect(); })
     }
 }
 
@@ -570,6 +620,7 @@ class AnnotateState extends State{
           .attr("data-live-search", "true")
           .attr("id", "sentence_tag")
           .attr("default", "Add a Tag")
+          .attr("data-container", "body")
           .on("change", function(){ temp_this.addSentenceTag(); });
         var sentence_htag = this.annotation_element.select("#sentence_tags").append("div")
           .attr("class", "buttons htag_container")
@@ -581,9 +632,12 @@ class AnnotateState extends State{
             .attr("id", "sentence_htag0")
             .attr("parent", hierarchy["start"])
             .attr("default", "Add a Tag")
+            .attr("data-container", "body")
             .on("change", function(){ temp_this.addSentenceHTag(d3.select(this)); });
-        this.refreshTagSelector(sentence_tag);
-        this.refreshTagSelector(sentence_htag);
+        $(sentence_tag.node()).on("shown.bs.select", function(){
+            d3.select(this).style("transform", "");
+        });
+        this.annotation_element.select("#sentence_tags_modal").style("overflow-x", "scroll");
     }
     addSentenceTag() {
         var tag_selector = this.annotation_element.select("#sentence_tag")
@@ -624,9 +678,8 @@ class ValidateState extends State {
         return annotations;
     }
     selectSentence(sentence_text) {
-        this.showAllSummaries();
         this.selected_sentence = sentence_text.attr("sentence");
-        this.switchToSentenceTags();
+        this.openSentenceTagsModal();
         this.displaySentenceTags(sentence_text.attr("sentence"));
     }
     addAnnotationButton(senttag_container) {

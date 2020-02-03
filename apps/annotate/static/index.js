@@ -229,5 +229,5 @@ function updateFutureTags() {
 
 function refreshTab(tab) {
     states[tab].refreshTagSelectors();
-    needs_refresh.remove(tab);
+    needs_refresh.delete(tab);
 }
