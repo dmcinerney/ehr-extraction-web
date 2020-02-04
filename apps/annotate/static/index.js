@@ -193,13 +193,12 @@ function addCustomTag(description, parent_tag=false) {
     hierarchy['options'][parent_tag].push(tagname);
     hierarchy['options'][tagname] = [];
     hierarchy['parents'][tagname] = parent_tag;
-    hierarchy['options'][parent_tag].forEach(function(e, i){ hierarchy['indices'][e] = i; })
+    hierarchy['indices'][tagname] = hierarchy['options'][parent_tag].length-1;
+    //hierarchy['options'][parent_tag].forEach(function(e, i){ hierarchy['indices'][e] = i; });
     Array.from(Object.keys(states)).forEach(function(e){
-        if (states[e].with_custom){
-            needs_refresh.add(e);
-            if (d3.select("#"+e+"-tab").classed("active")) {
-                refreshTab(e);
-            }
+        needs_refresh.add(e);
+        if (d3.select("#"+e+"-tab").classed("active")) {
+            refreshTab(e);
         }
     });
 }

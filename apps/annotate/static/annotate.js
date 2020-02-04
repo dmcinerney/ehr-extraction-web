@@ -1,15 +1,8 @@
 class State {
     constructor(annotation_element, valid_queries, with_custom, is_future) {
         this.annotation_element = annotation_element;
-        if (!valid_queries) {
-            this.tags = Object.keys(descriptions);
-            this.disabled = new Set([]);
-        } else {
-            this.tags = valid_queries;
-            var alltags = new Set(Object.keys(descriptions));
-            var tags = new Set(this.tags);
-            this.disabled = new Set([...alltags].filter(x => !tags.has(x)));
-        }
+        this.tags = Object.keys(descriptions);
+        this.valid_queries = valid_queries;
         this.with_custom = with_custom;
         this.is_future = is_future;
         this.tag_sentences = {};
@@ -129,29 +122,41 @@ class State {
         if (selected_index != -1) {
             var tag = tag_selector.node().options[selected_index].value;
         }
-        if (tag_selector.classed("htag_selector")) {
-            var tag_groups = ["Custom Tags", "Other Tags"];
-            var options = hierarchy["options"][tag_selector.attr("parent")];
-            var custom_tags_set = new Set(custom_tags);
-            var tags = {
-                "Custom Tags": options.filter(function(e){ return (custom_tags_set.has(e)); }),
-                "Other Tags" : options.filter(function(e){ return !(custom_tags_set.has(e)); }),
-            };
-            this.populateHTagSelector(tag_selector, tag_groups, tags, this.disabled);
+
+        if (this.is_future) {
+            var interesting_tag_group = ["Positive Tags", positive_targets];
         } else {
-            if (this.is_future) {
-                var interesting_tag_group = ["Positive Tags", positive_targets];
-            } else {
-                var interesting_tag_group = ["Future Tags", future_tags];
-            }
-            var interesting_tag_set = new Set(interesting_tag_group[1]);
-            var tag_groups = [interesting_tag_group[0], "Custom Tags", "Other Tags"];
+            var interesting_tag_group = ["Future Tags", future_tags];
+        }
+        var tag_groups = [interesting_tag_group[0], "Custom Tags", "Other Tags"];
+        var interesting_tag_set = new Set(interesting_tag_group[1]);
+        var custom_tag_set = new Set(custom_tags);
+        if (this.with_custom) {
+            var disabled_set = new Set([]);
+        } else {
+            var disabled_set = custom_tag_set;
+        }
+        if (tag_selector.classed("htag_selector")) {
+            var options = hierarchy["options"][tag_selector.attr("parent")];
+            var custom_tag_group = options.filter(function(e){ return custom_tag_set.has(e) && !(interesting_tag_set.has(e)); });
+            var other_tag_group_not_disabled = options.filter(function(e){ return !(interesting_tag_set.has(e)) && !(custom_tag_set.has(e)) && !(disabled_set.has(e)); });
+            var other_tag_group_disabled = options.filter(function(e){ return !(interesting_tag_set.has(e)) && !(custom_tag_set.has(e)) && disabled_set.has(e); });
             var tags = {
-                "Custom Tags": custom_tags.filter(function(e){ return !(interesting_tag_set.has(e)); }),
-                "Other Tags" : this.tags.concat(Array.from(this.disabled)).filter(function(e){ return !(interesting_tag_set.has(e)); }),
+                "Custom Tags": custom_tag_group,
+                "Other Tags" : other_tag_group_not_disabled.concat(other_tag_group_disabled)
+            };
+            tags[interesting_tag_group[0]] = options.filter(function(e){ interesting_tag_set.has(e); });
+            this.populateHTagSelector(tag_selector, tag_groups, tags, disabled_set);
+        } else {
+            var custom_tag_group = custom_tags.filter(function(e){ return !(interesting_tag_set.has(e)); });
+            var other_tag_group_not_disabled = this.tags.filter(function(e){ return !(interesting_tag_set.has(e)) && !(custom_tag_set.has(e)) && !(disabled_set.has(e)); })
+            var other_tag_group_disabled = Array.from(disabled_set).filter(function(e){ return !(interesting_tag_set.has(e)) && !(custom_tag_set.has(e)); })
+            var tags = {
+                "Custom Tags": custom_tag_group,
+                "Other Tags" : other_tag_group_not_disabled.concat(other_tag_group_disabled)
             };
             tags[interesting_tag_group[0]] = Array.from(interesting_tag_group[1]);
-            this.populateTagSelector(tag_selector, tag_groups, tags, this.disabled);
+            this.populateTagSelector(tag_selector, tag_groups, tags, disabled_set);
         }
         this.styleTags(tag_selector);
         if (selected_index != -1) {
