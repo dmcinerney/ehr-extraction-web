@@ -88,34 +88,42 @@ body {
     margin-left: 20px;
     display: flex;
     justify-content: space-between;
+    align-items: center;
     margin-right: 20px;
-}
-
-.summary_sentence_text {
+    background-color: #e9ecef;
     border: 2px;
     border-color: white;
     border-style: solid;
-    margin-right: 20px;
+    border-radius: 10px;
+    padding: 6px;
+}
+
+.summary_sentence_text {
 }
 
 .summary_sentence_text:hover {
-    background-color: #017BFF;
-    color: white;
+    text-decoration: underline;
 }
 
 .sentence_tag {
+    margin-left: 20px;
     display: flex;
     justify-content: space-between;
+    align-items: center;
     margin-right: 20px;
+    background-color: #e9ecef;
+    border: 2px;
+    border-color: white;
+    border-style: solid;
+    border-radius: 10px;
+    padding: 6px;
 }
 
 .sentence_tag_text {
-    margin-right: 20px;
 }
 
 .sentence_tag_text:hover {
-    background-color: #017BFF;
-    color: white;
+    text-decoration: underline;
 }
 
 .reports_sentence {
@@ -205,6 +213,22 @@ body {
 
 .bootstrap-select .dropdown-menu li a {
     max-width: 50vw;
-    overflow-x: scroll;
-    padding-bottom: 10px;
+    overflow-x: overlay;
+    padding-bottom: 8px;
+    padding-top: 8px;
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+}
+
+.checkbox {
+    padding: 0px;
+    margin-left: 35px;
+    height: 1.3em;
+}
+
+button.close {
+    padding: 5px;
 }

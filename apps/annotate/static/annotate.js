@@ -49,7 +49,10 @@ class State {
             this.displaySentenceTags(i);
         } else {
             if (this.tag_sentences[tag] != null && this.tag_sentences[tag].has(i)) {
-                alert("tag already present for this sentence");
+                //alert("tag already present for this sentence");
+                this.selected_sentence = i;
+                this.openSentenceTagsModal();
+                this.displaySentenceTags(i);
             } else {
                 this.annotation_element.select("#sentence_"+i).classed("selected", true);
                 if (!(i in this.sentence_tags)) { this.sentence_tags[i] = new Set([]); }
@@ -71,7 +74,7 @@ class State {
         }
         this.displayTagSentences();
         if (this.selected_sentence) { this.displaySentenceTags(this.selected_sentence); }
-        this.styleTags(this.annotation_element.select("#tag"));
+        this.refreshTagSelectorsStyle();
         this.boldReports();
     }
     untagSentence(i, tag, refresh=true) {
@@ -94,6 +97,26 @@ class State {
         if (refresh) {
              this.refreshSummary();
         }
+    }
+    removeAllTagSentences(tag) {
+        if (tag in this.tag_sentences) {
+            var temp_this = this;
+            Array.from(this.tag_sentences[tag]).forEach(function(e){ temp_this.untagSentence(e, tag, false); });
+            this.refreshSummary();
+        }
+    }
+    removeAllSentenceTags(sentence) {
+        if (sentence in this.sentence_tags) {
+            var temp_this = this;
+            Array.from(this.sentence_tags[sentence]).forEach(function(e){ temp_this.untagSentence(sentence, e, false); });
+            this.refreshSummary();
+        }
+    }
+    refreshTagSelectorsStyle() {
+        var temp_this = this;
+        var refresh_func = function(){ temp_this.styleTags(d3.select(this)); };
+        this.annotation_element.selectAll(".selectpicker.tag_selector").each(refresh_func);
+        this.annotation_element.selectAll(".selectpicker.htag_selector").each(refresh_func);
     }
     refreshTagSelectors() {
         var temp_this = this;
@@ -129,8 +152,8 @@ class State {
             };
             tags[interesting_tag_group[0]] = Array.from(interesting_tag_group[1]);
             this.populateTagSelector(tag_selector, tag_groups, tags, this.disabled);
-            this.styleTags(this.annotation_element.select("#tag"));
         }
+        this.styleTags(tag_selector);
         if (selected_index != -1) {
             tag_selector.node().selectedIndex = tag_selector.select("#"+tag_selector.attr("id")+"_option_"+tag_idxs[tag]).attr("index");
             $(tag_selector.node()).selectpicker('refresh');
@@ -364,7 +387,7 @@ class State {
             var sentence_num = d3.select(this.parentNode).attr("sentence");
             var sentence = temp_this.annotation_element.select("#summary_sentence_"+tag_idxs[tag]+"_"+sentence_num);
             sentence.node().scrollIntoView({block: "center"});
-            temp_this.highlightMomentarily(sentence.select(".summary_sentence_text")); });
+            temp_this.highlightMomentarily(sentence); });
         this.addAnnotationButton(list_item);
     }
     displayTagSentences() {
@@ -380,34 +403,42 @@ class State {
             .attr("class", "card summary_div")
             .attr("tag", function(d) { return d; })
             .attr("id", function(d) { return "t_"+tag_idxs[d]; });
-        summary_div.append("div")
+        var summary_header = summary_div.append("div")
           .attr("class", "card-header")
           .attr("id", function(d){ return temp_this.annotation_element.attr("id")+"_t_"+tag_idxs[d]+"_header"; })
-          .append("h2")
-            .attr("class", "mb-0")
-            .append("button")
-              .attr("class", "btn btn-link")
-              .attr("type", "button")
-              .attr("data-toggle", "collapse")
-              .attr("data-target", function(d){ return "#"+temp_this.annotation_element.attr("id")+"_t_"+tag_idxs[d]+"_body"; })
-              .attr("aria-expanded", function(d){
-                   var tag_selector = temp_this.annotation_element.select("#tag").node();
-                   var tag = tag_selector.options[tag_selector.selectedIndex].value;
-                   return d == tag; })
-              .attr("aria-controls", function(d){ return temp_this.annotation_element.attr("id")+"_t_"+tag_idxs[d]+"_body"; })
-              .on("click", function(){
-                  if (!(d3.select(this.parentNode.parentNode.parentNode).select("div.collapse").classed("show"))) {
-                      var tag = d3.select(this.parentNode.parentNode.parentNode).attr("tag");
-                      temp_this.annotation_element.select("#tag").node().selectedIndex = temp_this.annotation_element.select("#tag_option_"+tag_idxs[tag]).attr("index");
-                      $(temp_this.annotation_element.select("#tag").node()).selectpicker('refresh');
-                      temp_this.chooseTag();
-                  } else {
-                      temp_this.deselect();
-                  }
-              })
-              .append("text")
-                .attr("class", "tagheader")
-                .html(getTagString);
+        summary_header.append("h2")
+          .attr("class", "mb-0")
+          .append("button")
+            .attr("class", "btn btn-link")
+            .attr("type", "button")
+            .attr("data-toggle", "collapse")
+            .attr("data-target", function(d){ return "#"+temp_this.annotation_element.attr("id")+"_t_"+tag_idxs[d]+"_body"; })
+            .attr("aria-expanded", function(d){
+                 var tag_selector = temp_this.annotation_element.select("#tag").node();
+                 var tag = tag_selector.options[tag_selector.selectedIndex].value;
+                 return d == tag; })
+            .attr("aria-controls", function(d){ return temp_this.annotation_element.attr("id")+"_t_"+tag_idxs[d]+"_body"; })
+            .on("click", function(){
+                if (!(d3.select(this.parentNode.parentNode.parentNode).select("div.collapse").classed("show"))) {
+                    var tag = d3.select(this.parentNode.parentNode.parentNode).attr("tag");
+                    temp_this.annotation_element.select("#tag").node().selectedIndex = temp_this.annotation_element.select("#tag_option_"+tag_idxs[tag]).attr("index");
+                    $(temp_this.annotation_element.select("#tag").node()).selectpicker('refresh');
+                    temp_this.chooseTag();
+                } else {
+                    temp_this.deselect();
+                }
+            })
+            .append("text")
+              .attr("class", "tagheader")
+              .html(getTagString);
+        summary_header.append("button")
+          .attr("type", "button")
+          .attr("class", "close")
+          .on("click", function(){
+              var tag = d3.select(this.parentNode.parentNode).attr("tag");
+              temp_this.removeAllTagSentences(tag);
+          })
+          .html("<span aria-hidden=\"true\">&times;</span>");
         var summary_ul = summary_div.append("div")
           .attr("id", function(d){ return temp_this.annotation_element.attr("id")+"_t_"+tag_idxs[d]+"_body"; })
           .attr("class", "collapse")
@@ -448,7 +479,7 @@ class State {
     addAnnotationButton(senttag_container) {
         var temp_this = this;
         senttag_container.append("button")
-          .attr("class", "btn btn-outline-danger btn-sm")
+          .attr("class", "close")
           .on("click", function(){
             var sentence_num = d3.select(this.parentNode).attr("sentence");
             var tag = d3.select(this.parentNode).attr("tag");
@@ -547,24 +578,31 @@ class State {
         if (tag == "default") {
             this.annotation_element.selectAll(".summary_div").select("div.collapse.show").each(function(){$(this).collapse('hide');});
         } else {
-            this.annotation_element.select("#"+this.annotation_element.attr("id")+"_t_"+tag_idxs[tag]+"_body").each(function(){$(this).collapse('show');});
+            var tag_block = this.annotation_element.select("#"+this.annotation_element.attr("id")+"_t_"+tag_idxs[tag]+"_body");
+            if (tag_block.node()) {
+                tag_block
+                  .each(function(){$(this).collapse('show');})
+                  .node().scrollIntoView({block: "start"});
+            } else {
+                this.annotation_element.selectAll(".summary_div").select("div.collapse.show").each(function(){$(this).collapse('hide');});
+            }
         }
     }
     sortNumber(a, b) {
         return a - b;
     }
-    styleTags(tag_selector) {
-        if (tag_selector.attr("id") == "tag") {
-            var temp_this = this;
-            var bold_tags = new Set(Object.keys(this.tag_sentences).filter(function(e){ return temp_this.tag_sentences[e].size > 0; }));
-            tag_selector.selectAll("option").classed("bold_option", function(){
-              var tag = d3.select(this).attr("value");
-              if (tag == "default") {
-                  return false;
-              } else {
-                  return bold_tags.has(tag);
-              }});
-            $(tag_selector).selectpicker('refresh');
+    styleTags(tag_selector, refresh=true) {
+        var temp_this = this;
+        var bold_tags = new Set(Object.keys(this.tag_sentences).filter(function(e){ return temp_this.tag_sentences[e].size > 0; }));
+        tag_selector.selectAll("option").classed("bold_option", function(){
+          var tag = d3.select(this).attr("value");
+          if (tag == "default") {
+              return false;
+          } else {
+              return bold_tags.has(tag);
+          }});
+        if (refresh) {
+            $(tag_selector.node()).selectpicker('refresh');
         }
     }
     boldReports() {
@@ -599,12 +637,12 @@ class State {
     }
     addOnClicks() {
         var temp_this = this;
-        this.annotation_element.select("#previous").on("click", function(){ temp_this.previousReport(); })
-        this.annotation_element.select("#report").on("change", function(){ temp_this.chooseReport(); })
-        this.annotation_element.select("#next").on("click", function(){ temp_this.nextReport(); })
+        this.annotation_element.select("#previous").on("click", function(){ temp_this.previousReport(); });
+        this.annotation_element.select("#report").on("change", function(){ temp_this.chooseReport(); });
+        this.annotation_element.select("#next").on("click", function(){ temp_this.nextReport(); });
         this.annotation_element.select("#tag").on("change", function(){ temp_this.chooseTag(); });
         this.annotation_element.select("#htag0").on("change", function(){ temp_this.chooseHTag(d3.select(this)); });
-        this.annotation_element.select("#deselect").on("click", function(){ temp_this.deselect(); })
+        this.annotation_element.select("#deselect").on("click", function(){ temp_this.deselect(); });
     }
 }
 
@@ -613,7 +651,7 @@ class AnnotateState extends State{
         super(annotation_element, valid_queries, with_custom, is_future);
         var temp_this = this;
         var sentence_tag = this.annotation_element.select("#sentence_tags").append("select")
-          .attr("class", "selectpicker tag_selector")
+          .attr("class", "selectpicker tag_selector forsentence")
           .attr("data-live-search", "true")
           .attr("id", "sentence_tag")
           .attr("default", "Add a Tag")
@@ -622,7 +660,7 @@ class AnnotateState extends State{
         var sentence_htag = this.annotation_element.select("#sentence_tags").append("div")
           .attr("class", "buttons htag_container")
             .append("select")
-            .attr("class", "selectpicker htag_selector")
+            .attr("class", "selectpicker htag_selector forsentence")
             .attr("data-live-search", "true")
             .attr("num", 0)
             .attr("base_id", "sentence_htag")
@@ -631,10 +669,14 @@ class AnnotateState extends State{
             .attr("default", "Add a Tag")
             .attr("data-container", "body")
             .on("change", function(){ temp_this.addSentenceHTag(d3.select(this)); });
-        $(sentence_tag.node()).on("shown.bs.select", function(){
-            d3.select(this).style("transform", "");
-        });
-        this.annotation_element.select("#sentence_tags_modal").style("overflow-x", "scroll");
+        this.annotation_element.select("#sentence_tags_modal")
+          .select(".modal-header")
+          .append("button")
+            .attr("id", "remove_sentence_tags")
+            .attr("type", "button")
+            .attr("class", "btn btn-danger")
+            .html("Remove All")
+        this.annotation_element.select("#remove_sentence_tags").on("click", function(){ temp_this.removeAllSentenceTags(temp_this.selected_sentence); });
     }
     addSentenceTag() {
         var tag_selector = this.annotation_element.select("#sentence_tag")
@@ -659,6 +701,24 @@ class AnnotateState extends State{
             this.selectHTag(tag_selector, "sentence_tag");
         }
     }
+/*    styleTags(tag_selector, refresh=true) {
+        if (tag_selector.classed("forsentence") && this.selected_sentence && this.selected_sentence in this.sentence_tags) {
+            var temp_this = this;
+            tag_selector.selectAll("option")
+              .each(function(){
+                var tag = d3.select(this).attr("value");
+                if (temp_this.sentence_tags[temp_this.selected_sentence].has(tag) || temp_this.disabled.has(tag)) {
+                    d3.select(this).attr("disabled", "true");
+                } else {
+                    d3.select(this).node().removeAttribute("disabled");
+                }});
+        }
+        super.styleTags(tag_selector, refresh);
+    } */
+    displaySentenceTags(i) {
+        super.displaySentenceTags(i);
+        this.refreshTagSelectorsStyle();
+    }
 }
 
 
@@ -681,7 +741,7 @@ class ValidateState extends State {
     }
     addAnnotationButton(senttag_container) {
         var checkbox_container = senttag_container.append("div")
-          .attr("class", "custom-control custom-checkbox form-control-lg");
+          .attr("class", "custom-control custom-checkbox form-control-lg checkbox");
         var temp_this = this;
         checkbox_container.append("input")
           .attr("type", "checkbox")
