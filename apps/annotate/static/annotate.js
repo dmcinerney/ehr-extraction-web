@@ -145,7 +145,7 @@ class State {
                 "Custom Tags": custom_tag_group,
                 "Other Tags" : other_tag_group_not_disabled.concat(other_tag_group_disabled)
             };
-            tags[interesting_tag_group[0]] = options.filter(function(e){ interesting_tag_set.has(e); });
+            tags[interesting_tag_group[0]] = options.filter(function(e){ return interesting_tag_set.has(e); });
             this.populateHTagSelector(tag_selector, tag_groups, tags, disabled_set);
         } else {
             var custom_tag_group = custom_tags.filter(function(e){ return !(interesting_tag_set.has(e)); });

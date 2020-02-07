@@ -206,9 +206,13 @@ body {
 }
 
 .forward_button {
-    top: 0;
     right: 0;
     position: absolute;
+}
+
+.bootstrap-select .dropdown-menu li {
+    display: flex;
+    align-items: center;
 }
 
 .bootstrap-select .dropdown-menu li a {
