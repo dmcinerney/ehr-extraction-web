@@ -1,8 +1,8 @@
 class State {
-    constructor(annotation_element, valid_queries, with_custom, is_future) {
+    constructor(annotation_element, trained_queries, with_custom, is_future) {
         this.annotation_element = annotation_element;
         this.tags = Object.keys(descriptions);
-        this.valid_queries = valid_queries;
+        this.trained_queries = trained_queries;
         this.with_custom = with_custom;
         this.is_future = is_future;
         this.tag_sentences = {};
@@ -652,8 +652,8 @@ class State {
 }
 
 class AnnotateState extends State{
-    constructor(annotation_element, valid_queries, with_custom, is_future) {
-        super(annotation_element, valid_queries, with_custom, is_future);
+    constructor(annotation_element, trained_queries, with_custom, is_future) {
+        super(annotation_element, trained_queries, with_custom, is_future);
         var temp_this = this;
         var sentence_tag = this.annotation_element.select("#sentence_tags").append("select")
           .attr("class", "selectpicker tag_selector forsentence")
@@ -728,8 +728,8 @@ class AnnotateState extends State{
 
 
 class ValidateState extends State {
-    constructor(validation_element, valid_queries, with_custom, is_future) {
-        super(validation_element, valid_queries, with_custom, is_future);
+    constructor(validation_element, trained_queries, with_custom, is_future) {
+        super(validation_element, trained_queries, with_custom, is_future);
         this.heatmap = "sentence_level_attention";
         this.cached_results = {};
         this.checked_senttags = {};

@@ -9,10 +9,10 @@ import random
 
 
 # tabs template:
-# (id, name, description, type, which_reports, valid_queries, with_custom, is_future)
+# (id, name, description, type, which_reports, trained_queries, with_custom, is_future)
 # type - 'validate' or 'annotate'
 # which_reports - Reports and corresponding results are stored in an array in the backend. This describes which index in the array that tab will display.  This will be static.
-# valid_queries - which queries are valid for this tab
+# trained_queries - which queries the model was trained on (for model tabs)
 # with_custom - describes if the tab is allowed to use custom tags
 # is_future - describes if the tab annotates future reports or past
 @app.route('/', methods=['GET'])
@@ -27,9 +27,9 @@ def index():
     print(models)
     startup['curr_models'] = {}
     for i,k in enumerate(models):
-        valid_queries = startup['interface'].get_valid_queries(k)
+        trained_queries = startup['interface'].get_trained_queries(k)
         with_custom = startup['interface'].with_custom(k)
-        tabs.append(('model-%i-summaries' % (i+1), 'Model %i Summaries' % (i+1), 'validate the model summaries of the past reports', 'validate', 0, valid_queries, with_custom, False))
+        tabs.append(('model-%i-summaries' % (i+1), 'Model %i Summaries' % (i+1), 'validate the model summaries of the past reports', 'validate', 0, trained_queries, with_custom, False))
         startup['curr_models']['model-%i-summaries' % (i+1)] = k
     progress = startup['file_generator'].progress()
     num_instances = len(startup['file_generator'])
