@@ -11,6 +11,7 @@ A visualization and annotation tool for extractive summarization of electronic h
 
 To run the server:
 
-    python <script_name> <interface_dir> [-f <file> OR -d <data_dir>] [-a annotator_identifier]
+    python annotate.py [-h] [-a ANNOTATOR] [-i INTERFACE] [-m MODELS]
+                       interface_dir data_dir
 
-where `<script_name>` is `validate_extraction.py`, `<interface_dir>` is the directory to the properly set up `ehr-extraction-models` repository from https://github.com/dmcinerney/ehr-extraction-models, `<file>` optionally loads a particular file to the web interface, and `<data_dir>` optionally loads files from a directory to the interface.
+where `interface_dir` is the directory to the properly set up `ehr-extraction-models` repository from https://github.com/dmcinerney/ehr-extraction-models, `data_dir` loads files from a directory to the interface, `ANNOTATOR` is the annotator identifier, `interface` is the name of the file in the `interface_dir` that contains the interface (defaults to `"interface"`), and `MODELS`, for each time the flag appears, appends the string as a model to load.
