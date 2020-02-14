@@ -40,6 +40,10 @@
     <div class="progress">
     </div>
     <div>
+      <button class="btn btn-primary" onclick="previousInstance()">Previous</button>
+      <button class="btn btn-primary" onclick="nextInstance()">Next</button>
+    </div>
+    <div>
       {% if file_from_server == "true" %}
         <text id="reports_file">Patient File: {{ file }}</text>
       {% else %}

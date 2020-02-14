@@ -230,3 +230,31 @@ function refreshTab(tab) {
     states[tab].refreshTagSelectors();
     needs_refresh.delete(tab);
 }
+
+function previousInstance() {
+    url = 'http://localhost:5000/previous'
+    var formData = new FormData();
+    $.post({
+        url: url,
+        data: formData,
+        success: function(result, status){
+            location.reload();
+        },
+        processData: false,
+        contentType: false,
+    });
+}
+
+function nextInstance() {
+    url = 'http://localhost:5000/next'
+    var formData = new FormData();
+    $.post({
+        url: url,
+        data: formData,
+        success: function(result, status){
+            location.reload();
+        },
+        processData: false,
+        contentType: false,
+    });
+}
