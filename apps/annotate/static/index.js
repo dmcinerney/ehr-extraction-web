@@ -143,7 +143,6 @@ function getFile() {
         url: url,
         data: formData,
         success: function(result, status){
-            d3.select("#patient_mrn").html("Patient MRN: "+result["patient_mrn"]);
             if ("positive_targets" in result) {
                 positive_targets = result["positive_targets"];
             }

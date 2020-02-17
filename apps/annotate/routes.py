@@ -48,6 +48,12 @@ def index():
     tabs = tabs
     annotations = read_pickle(join(startup["annotations_dir"], file))\
                   if exists(join(startup["annotations_dir"], file)) else {}
+    if isinstance(startup["file"], str):
+        instance = read_pickle(startup['file'])
+        reports = pd.DataFrame(eval(instance['reports']))
+        patient_mrn = str(reports["patient_id"].iloc[0])
+    else:
+        patient_mrn = ""
     return render_template(
         'index.html',
         progress=progress,
@@ -59,6 +65,7 @@ def index():
         file=file,
         tabs=tabs,
         annotations=annotations,
+        patient_mrn=patient_mrn,
     )
 
 @app.route('/get_file', methods=['POST'])
@@ -87,8 +94,7 @@ def get_file():
     results2['original_reports'] = [(i,report.report_type,str(report.date),report.text) for i,report in results2['original_reports'].iterrows()]
     startup['tab_reports'] = [reports, future_reports]
     startup['tab_results'] = [results1, results2]
-    patient_mrn = str(reports["patient_id"].iloc[0])
-    return {"tab_results":startup['tab_results'], "patient_mrn":patient_mrn, "positive_targets":positive_targets}
+    return {"tab_results":startup['tab_results'], "positive_targets":positive_targets}
 
 
 global_data = set(['custom_tags', 'descriptions', 'hierarchy'])
