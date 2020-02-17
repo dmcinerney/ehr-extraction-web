@@ -30,6 +30,7 @@
       var future_tags = [];
       var future_tabs = [];
       var needs_refresh = new Set([]);
+      var annotations = JSON.parse('{{ annotations | tojson | safe}}');
     </script>
     <script src="/static/annotate.js"></script>
     <script src="/static/index.js"></script>

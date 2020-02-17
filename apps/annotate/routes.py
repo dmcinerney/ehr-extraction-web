@@ -4,6 +4,7 @@ from . import app, startup
 from flask import request, render_template, send_file, make_response
 from werkzeug import secure_filename
 import pandas as pd
+from pytt.utils import read_pickle, write_pickle
 import pickle as pkl
 import random
 
@@ -35,8 +36,7 @@ def index():
     num_instances = len(startup['file_generator'])
     file_from_server = "false" if startup["file"] is None else "true"
     if exists(join(startup['annotations_dir'], 'global_info.pkl')):
-        with open(join(startup["annotations_dir"], 'global_info.pkl'), 'rb') as f:
-            global_info = pkl.load(f)
+        global_info = read_pickle(join(startup["annotations_dir"], 'global_info.pkl'))
         descriptions = global_info['descriptions']
         hierarchy = global_info['hierarchy']
         custom_tags = global_info['custom_tags']
@@ -46,6 +46,8 @@ def index():
         custom_tags = []
     file = basename(startup["file"]) if startup["file"] else False
     tabs = tabs
+    annotations = read_pickle(join(startup["annotations_dir"], file))\
+                  if exists(join(startup["annotations_dir"], file)) else {}
     return render_template(
         'index.html',
         progress=progress,
@@ -56,6 +58,7 @@ def index():
         custom_tags=custom_tags,
         file=file,
         tabs=tabs,
+        annotations=annotations,
     )
 
 @app.route('/get_file', methods=['POST'])
@@ -68,8 +71,7 @@ def get_file():
         filename = startup['file']
     else:
         raise Exception
-    with open(filename, 'rb') as f:
-        instance = pkl.load(f)
+    instance = read_pickle(filename)
     #import pdb; pdb.set_trace()
     targets = eval(instance['targets'])
     labels = eval(instance['labels'])
@@ -93,12 +95,11 @@ global_data = set(['custom_tags', 'descriptions', 'hierarchy'])
 
 @app.route('/', methods=['POST'])
 def annotate():
-    form_data = {k:json.loads(v) for k,v in request.form.items()}
-    with open(join(startup["annotations_dir"], 'global_info.pkl'), 'wb') as f:
-        pkl.dump({k:form_data[k] for k in global_data}, f)
-    with open(join(startup["annotations_dir"], basename(startup["file"])), 'wb') as f:
-        pkl.dump({k if k not in startup['curr_models'].keys() else startup['curr_models'][k]:v for k,v in form_data.items() if k not in global_data}, f)
     # record annotations
+    form_data = {k:json.loads(v) for k,v in request.form.items()}
+    write_pickle({k:form_data[k] for k in global_data}, join(startup["annotations_dir"], 'global_info.pkl'))
+    write_pickle({k if k not in startup['curr_models'].keys() else startup['curr_models'][k]:v for k,v in form_data.items() if k not in global_data},
+                 join(startup["annotations_dir"], basename(startup["file"])))
     if startup['file_generator'] is None: # not currently used
         startup['file'] = None
     else:
@@ -127,3 +128,19 @@ def query_article():
 
 def topk(index_score_list, k):
     return [i for i,s in sorted(index_score_list, key=lambda x: -x[1])[:k] if s > 0]
+
+@app.route('/next', methods=['POST'])
+def next_report():
+    if startup['file_generator'] is None: # not currently used
+        startup['file'] = None
+    else:
+        startup['file'] = next(startup['file_generator'])
+    return {}
+
+@app.route('/previous', methods=['POST'])
+def previous_report():
+    if startup['file_generator'] is None: # not currently used
+        startup['file'] = None
+    else:
+        startup['file'] = startup['file_generator'].previous()
+    return {}

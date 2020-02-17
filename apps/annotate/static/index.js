@@ -38,6 +38,10 @@ function onReportsLoaded(tab_results) {
       .each(function(d){
         var state = states[d[0]];
         state.initWithResult(tab_results[d[4]]); });
+    d3.selectAll(".panel_vis").each(function(d){
+      if (d[0] in annotations) {
+          states[d[0]].setAnnotations(annotations[d[0]]);
+      }});
 }
 
 function populateTabs(){

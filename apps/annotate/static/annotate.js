@@ -14,6 +14,15 @@ class State {
         this.htags = {};
         this.annotation_element.select("#htag0").attr("parent", hierarchy["start"]);
     }
+    setAnnotations(annotations) {
+        var temp_this = this;
+        Object.keys(annotations.tag_sentences).forEach(function(t){
+            Array.from(annotations.tag_sentences[t]).forEach(function(i){
+                temp_this.tagSentence(i, t, false);
+            });
+        });
+        this.refreshSummary();
+    }
     getAnnotations() {
         var tag_sentences = {};
         var temp_this = this;
@@ -734,6 +743,7 @@ class ValidateState extends State {
         this.cached_results = {};
         this.checked_senttags = {};
     }
+    // TODO: add setAnnotations Method for validate state!
     getAnnotations() {
         var annotations = super.getAnnotations();
         annotations['checked_senttags'] = this.checked_senttags;
