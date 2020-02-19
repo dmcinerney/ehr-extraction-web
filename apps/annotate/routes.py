@@ -45,6 +45,7 @@ def index():
         hierarchy = startup['interface'].get_hierarchy()
         custom_tags = []
     file = basename(startup["file"]) if startup["file"] else False
+    print(file)
     tabs = tabs
     annotations = read_pickle(join(startup["annotations_dir"], file))\
                   if exists(join(startup["annotations_dir"], file)) else {}

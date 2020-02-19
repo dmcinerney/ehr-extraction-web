@@ -810,7 +810,7 @@ class ValidateState extends State {
         var tag_selector = this.annotation_element.select("#tag");
         var tag = tag_selector.node().options[tag_selector.node().selectedIndex].value;
         var is_nl = custom_tags.includes(tag);
-        var url = 'http://localhost:5000/query';
+        var url = '/query';
         var formData = new FormData();
         formData.append("is_nl", is_nl);
         formData.append("index", this.annotation_element.datum()[4]);

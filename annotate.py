@@ -15,6 +15,7 @@ if __name__=='__main__':
     parser.add_argument('-a', '--annotator', default='default')
     parser.add_argument('-i', '--interface', default='interface')
     parser.add_argument('-m','--models', action='append')
+    parser.add_argument('-p','--port')
     args = parser.parse_args()
     if args.data_dir is None:
         raise NotImplementedError
@@ -28,4 +29,4 @@ if __name__=='__main__':
         exec('import '+args.interface)
     models_to_load = args.models if args.models is not None else []
     startup['interface'] = eval(args.interface).FullModelInterface(models_to_load=models_to_load)
-    app.run(debug=True)
+    app.run(debug=True, port=args.port)

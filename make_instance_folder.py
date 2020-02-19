@@ -2,6 +2,7 @@ import os
 import pandas as pd
 import pickle as pkl
 from argparse import ArgumentParser
+from tqdm import tqdm
 
 if __name__ == '__main__':
     parser = ArgumentParser()
@@ -10,7 +11,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     os.mkdir(args.output_dir)
     df = pd.read_csv(args.data_file, compression='gzip')
-    for i,row in df.iterrows():
+    for i,row in tqdm(df.iterrows(), total=len(df)):
         instance_file = os.path.join(args.output_dir, 'instance_%i.pkl' % i)
         with open(instance_file, 'wb') as f:
             pkl.dump(row.to_dict(), f)
