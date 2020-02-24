@@ -66,15 +66,15 @@ class FileGenerator:
         return self
 
     def previous(self):
-        self.curr_index -= 1
-        if self.curr_index < 0:
+        if self.curr_index <= 0:
             raise Exception
+        self.curr_index -= 1
         return abspath(join(self.data_dir, self.instances[self.curr_index]))
 
     def __next__(self):
-        self.curr_index += 1
-        if self.curr_index >= len(self.instances):
+        if self.curr_index >= len(self.instances)-1:
             raise StopIteration
+        self.curr_index += 1
         return abspath(join(self.data_dir, self.instances[self.curr_index]))
 
     def __len__(self):

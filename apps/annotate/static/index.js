@@ -127,7 +127,7 @@ function includeHTML() {
 };
 
 function getFile() {
-    url = 'http://localhost:5000/get_file';
+    url = '/get_file';
     var formData = new FormData();
     if (!file_from_server) {
         var x = document.getElementById("reports_file");
@@ -165,7 +165,7 @@ function closeLoader(selection) {
 }
 
 function submit() {
-    url = 'http://localhost:5000'
+    url = '/'
     var formData = new FormData();
     formData.append("custom_tags", JSON.stringify(custom_tags));
     formData.append("descriptions", JSON.stringify(descriptions));
@@ -235,7 +235,7 @@ function refreshTab(tab) {
 }
 
 function previousInstance() {
-    url = 'http://localhost:5000/previous'
+    url = '/previous'
     var formData = new FormData();
     $.post({
         url: url,
@@ -249,7 +249,7 @@ function previousInstance() {
 }
 
 function nextInstance() {
-    url = 'http://localhost:5000/next'
+    url = '/next'
     var formData = new FormData();
     $.post({
         url: url,
