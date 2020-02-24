@@ -21,12 +21,12 @@ def get_files(dir):
     return set([f for f in listdir(dir) if isfile(join(dir, f))])
 
 class FileGenerator:
-    def __init__(self, data_dir, annotations_dir):
+    def __init__(self, data_dir, annotations_dir, reload=False):
         self.data_dir = data_dir
         self.annotations_dir = annotations_dir
         patient_dict_file = join(data_dir, 'patient_to_instances.pkl')
         self.patient_dict = read_pickle(patient_dict_file)\
-                            if exists(patient_dict_file) else\
+                            if exists(patient_dict_file) and not reload else\
                             create_patient_dict(data_dir)
         self.instance_ordering = self.create_instance_ordering()
         annotated_files_set = get_files(annotations_dir).difference(set(['global_info.pkl']))

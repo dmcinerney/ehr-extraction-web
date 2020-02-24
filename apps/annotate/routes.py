@@ -18,6 +18,8 @@ import random
 # is_future - describes if the tab annotates future reports or past
 @app.route('/', methods=['GET'])
 def index():
+    if startup['file'] is None:
+        return render_template('done.html')
     print(startup['file'])
     tabs = [
         ('future-reports', 'Future Reports', 'annotate the reports from the 12 month window after the first mr','annotate', 1, None, True, True),
@@ -44,7 +46,7 @@ def index():
         descriptions = startup['interface'].get_descriptions()
         hierarchy = startup['interface'].get_hierarchy()
         custom_tags = []
-    file = basename(startup["file"]) if startup["file"] else False
+    file = basename(startup["file"])
     tabs = tabs
     annotations = read_pickle(join(startup["annotations_dir"], file))\
                   if exists(join(startup["annotations_dir"], file)) else {}
@@ -112,7 +114,7 @@ def annotate():
         try:
             startup['file'] = next(startup['file_generator'])
         except StopIteration:
-            startup['file'] = False
+            startup['file'] = None
     return {}
 
 @app.route('/query', methods=['POST'])

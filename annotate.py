@@ -15,6 +15,8 @@ if __name__=='__main__':
     parser.add_argument('-a', '--annotator', default='default')
     parser.add_argument('-i', '--interface', default='interface')
     parser.add_argument('-m','--models', action='append')
+    parser.add_argument('-d','--device', default='cpu')
+    parser.add_argument('-r','--reload', default=False, action='store_true')
     args = parser.parse_args()
     if args.data_dir is None:
         raise NotImplementedError
@@ -22,10 +24,13 @@ if __name__=='__main__':
     if not exists(startup['annotations_dir']):
         mkdir(startup['annotations_dir'])
     np.random.seed(0)
-    startup['file_generator'] = FileGenerator(args.data_dir, startup['annotations_dir'])
-    startup['file'] = next(startup['file_generator'])
+    startup['file_generator'] = FileGenerator(args.data_dir, startup['annotations_dir'], reload=args.reload)
+    try:
+        startup['file'] = next(startup['file_generator'])
+    except StopIteration:
+        startup['file'] = None
     with directory(args.interface_dir):
         exec('import '+args.interface)
     models_to_load = args.models if args.models is not None else []
-    startup['interface'] = eval(args.interface).FullModelInterface(models_to_load=models_to_load)
+    startup['interface'] = eval(args.interface).FullModelInterface(models_to_load=models_to_load, device=args.device)
     app.run(debug=True)
