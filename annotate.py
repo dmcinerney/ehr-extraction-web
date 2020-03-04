@@ -21,7 +21,7 @@ if __name__=='__main__':
     args = parser.parse_args()
     if args.data_dir is None:
         raise NotImplementedError
-    startup['annotations_dir'] = join(args.data_dir, args.annotator+"_annotations")
+    startup['annotations_dir'] = join(args.data_dir, args.annotator)
     if not exists(startup['annotations_dir']):
         mkdir(startup['annotations_dir'])
     np.random.seed(0)
