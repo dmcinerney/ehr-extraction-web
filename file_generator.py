@@ -11,6 +11,9 @@ def create_patient_dict(data_dir):
     for instance_file in tqdm(instance_files):
         instance = read_pickle(join(data_dir, instance_file))
         mrn = pd.DataFrame(eval(instance['reports'])).patient_id.iloc[0]
+        #labels = eval(instance['labels'])
+        #pos = set([c for i,c in enumerate(eval(instance['targets'])) if labels[i] == 1])
+        #if '191' not in pos: continue
         if mrn not in patient_dict.keys():
             patient_dict[mrn] = set([])
         patient_dict[mrn].add(instance_file)
