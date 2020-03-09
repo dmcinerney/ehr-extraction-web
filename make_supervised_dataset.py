@@ -12,7 +12,7 @@ from pytt.utils import read_pickle, write_pickle
 #   'all' for all instances
 #   'annotations' for instances that have at least one annotation
 #   <annotation_subdirectory> for instances present in the annotation subdirectory
-def instances_to_data(instances_dir, output_data_dir, limit_to='annotations'):
+def instances_to_data(instances_dir, output_data_dir, limit_to='annotations', custom=False):
     subprocess.run(["mkdir", output_data_dir])
     output_data_file = join(output_data_dir, 'supervised.data')
     output_hierarchy_file = join(output_data_dir, 'hierarchy.pkl')
@@ -24,9 +24,10 @@ def instances_to_data(instances_dir, output_data_dir, limit_to='annotations'):
         global_info = None
         old_to_new = {}
         for dir in subdirectories:
-            global_info_file = join(instances_dir, dir, 'global_info.pkl')
-            if exists(global_info_file):
-                global_info, old_to_new = merge(global_info, read_pickle(global_info_file))
+            if custom:
+                global_info_file = join(instances_dir, dir, 'global_info.pkl')
+                if exists(global_info_file):
+                    global_info, old_to_new = merge(global_info, read_pickle(global_info_file))
             if not dir.endswith('_annotations'): continue
             annotations = next(iter(walk(join(instances_dir, dir))))[2]
             annotations = set(annotations)
@@ -40,14 +41,16 @@ def instances_to_data(instances_dir, output_data_dir, limit_to='annotations'):
                 instances[idx]['annotations'][dir] = convert_annotations(
                     read_pickle(join(instances_dir, dir, annotation_file)), old_to_new)
         for k,v in list(instances.items()):
-            new_targets = list(set([target for annotator in v['annotations'].values() for target in annotator['past-reports']['tag_sentences'].keys()]))
+            new_targets = list(set([target for annotator in v['annotations'].values() for target in annotator['past-reports']['tag_sentences'].keys()
+                                    if custom or not target.startswith("custom")]))
             if len(new_targets) == 0:
                 del instances[k]
                 continue
             instances[k]['targets'] = new_targets
             instances[k]['labels'] = [1 for t in new_targets]
         pd.DataFrame(instances).transpose().to_csv(output_data_file, compression='gzip')
-        write_pickle(global_info["hierarchy"], output_hierarchy_file)
+        if custom:
+            write_pickle(global_info["hierarchy"], output_hierarchy_file)
     else:
         # TODO: set file generator for the subdirectory's instances
         raise NotImplementedError
@@ -62,7 +65,7 @@ def merge(global_info1, global_info2):
     offset = len(g1c)
     old_to_new = {}
     for i,custom_tag in enumerate(g2c):
-        new_name = "custom"+str(offest+i)
+        new_name = "custom"+str(offset+i)
         old_to_new[custom_tag] = new_name
         g1c.append(new_name)
     for old,new in old_to_new.items():
@@ -92,5 +95,6 @@ if __name__ == '__main__':
                         help="""limit_to options: 'all' for all instances,
                              'annotations' for instances that have at least one annotation,
                              <annotation_subdirectory> for instances present in the annotation subdirectory""")
+    parser.add_argument('-c', '--custom', action='store_true', help='include the custom tags')
     args = parser.parse_args()
-    instances_to_data(args.instances_dir, args.output_data_dir, limit_to=args.limit_to)
+    instances_to_data(args.instances_dir, args.output_data_dir, limit_to=args.limit_to, custom=args.custom)
