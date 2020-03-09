@@ -1,7 +1,7 @@
 class State {
     constructor(annotation_element, trained_queries, with_custom, is_future) {
         this.annotation_element = annotation_element;
-        this.tags = Object.keys(descriptions);
+        this.tags = Object.keys(hierarchy["descriptions"]);
         this.trained_queries = trained_queries;
         this.with_custom = with_custom;
         this.is_future = is_future;
@@ -256,7 +256,7 @@ class State {
           .enter()
           .append("option")
           .attr("value", function(d) { return d; })
-          .attr("description", function(d) { return descriptions[d]; })
+          .attr("description", function(d) { return hierarchy["descriptions"][d]; })
           .attr("index", function(d) {
             option_values.push(d);
             return option_values.length-1; })
@@ -895,8 +895,8 @@ function updateProgressBar(progress_bar, new_value) {
 }
 
 function getTagString(d) {
-    if (descriptions[d] != "") {
-        return d + ": " + descriptions[d];
+    if (hierarchy["descriptions"][d] != "") {
+        return d + ": " + hierarchy["descriptions"][d];
     } else {
         return d;
     }

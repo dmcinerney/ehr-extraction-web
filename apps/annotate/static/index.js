@@ -168,7 +168,6 @@ function submit() {
     url = '/'
     var formData = new FormData();
     formData.append("custom_tags", JSON.stringify(custom_tags));
-    formData.append("descriptions", JSON.stringify(descriptions));
     formData.append("hierarchy", JSON.stringify(hierarchy));
     Array.from(Object.keys(states)).forEach(function(e){
         formData.append(e, JSON.stringify(states[e].getAnnotations()));
@@ -186,9 +185,9 @@ function submit() {
 
 function addCustomTag(description, parent_tag=false) {
     var tagname = 'custom'+(custom_tags.length + 1);
-    if (tagname in descriptions) { alert("error! server bug: no query can be named "+tagname) }
+    if (tagname in hierarchy["descriptions"]) { alert("error! server bug: no query can be named "+tagname) }
     tag_idxs[tagname] = Array.from(Object.keys(tag_idxs)).length
-    descriptions[tagname] = description
+    hierarchy["descriptions"][tagname] = description
     custom_tags.unshift(tagname);
     if (!parent_tag) {
         parent_tag = hierarchy['start'];

@@ -39,11 +39,9 @@ def index():
     file_from_server = "false" if startup["file"] is None else "true"
     if exists(join(startup['annotations_dir'], 'global_info.pkl')):
         global_info = read_pickle(join(startup["annotations_dir"], 'global_info.pkl'))
-        descriptions = global_info['descriptions']
         hierarchy = global_info['hierarchy']
         custom_tags = global_info['custom_tags']
     else:
-        descriptions = startup['interface'].get_descriptions()
         hierarchy = startup['interface'].get_hierarchy()
         custom_tags = []
     file = basename(startup["file"])
@@ -62,7 +60,6 @@ def index():
         progress=progress,
         num_instances=num_instances,
         file_from_server=file_from_server,
-        descriptions=descriptions,
         hierarchy=hierarchy,
         custom_tags=custom_tags,
         file=file,
@@ -100,7 +97,7 @@ def get_file():
     return {"tab_results":startup['tab_results'], "positive_targets":positive_targets}
 
 
-global_data = set(['custom_tags', 'descriptions', 'hierarchy'])
+global_data = set(['custom_tags', 'hierarchy'])
 
 @app.route('/', methods=['POST'])
 def annotate():
