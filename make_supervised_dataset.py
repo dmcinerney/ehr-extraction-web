@@ -7,6 +7,17 @@ from argparse import ArgumentParser
 from tqdm import tqdm
 from pytt.utils import read_pickle, write_pickle
 
+def ancestors(parents, start, nodes, stop_nodes=set()):
+    node_stack = copy.deepcopy(nodes)
+    new_nodes = set()
+    while len(node_stack) > 0:
+        node = node_stack.pop()
+        if node in stop_nodes: continue # don't add stop nodes
+        if node in new_nodes: continue # don't add nodes already there
+        if node == start: continue # don't add the start node
+        new_nodes.add(node)
+        node_stack.extend([parents[node]])
+    return list(new_nodes)
 
 # limit_to is one of the following:
 #   'all' for all instances
@@ -46,6 +57,7 @@ def instances_to_data(instances_dir, output_data_dir, limit_to='annotations', cu
             if len(new_targets) == 0:
                 del instances[k]
                 continue
+            new_targets = ancestors(global_info["start"], global_info["parents"], new_targets)
             instances[k]['targets'] = new_targets
             instances[k]['labels'] = [1 for t in new_targets]
         pd.DataFrame(instances).transpose().to_csv(output_data_file, compression='gzip')
