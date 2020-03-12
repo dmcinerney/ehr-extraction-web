@@ -1,3 +1,4 @@
+import copy
 from os import walk
 from os.path import join, exists
 import subprocess
@@ -35,11 +36,8 @@ def instances_to_data(instances_dir, output_data_dir, limit_to='annotations', cu
         global_info = None
         old_to_new = {}
         for dir in subdirectories:
-            if custom:
-                import pdb; pdb.set_trace()
-                global_info_file = join(instances_dir, dir, 'global_info.pkl')
-                if exists(global_info_file):
-                    global_info, old_to_new = merge(global_info, read_pickle(global_info_file))
+            global_info_file = join(instances_dir, dir, 'global_info.pkl')
+            global_info, old_to_new = merge(global_info, read_pickle(global_info_file))
             if not dir.endswith('_annotations'): continue
             annotations = next(iter(walk(join(instances_dir, dir))))[2]
             annotations = set(annotations)
@@ -58,7 +56,7 @@ def instances_to_data(instances_dir, output_data_dir, limit_to='annotations', cu
             if len(new_targets) == 0:
                 del instances[k]
                 continue
-            new_targets = ancestors(global_info["hierarchy"]["start"], global_info["hierarchy"]["parents"], new_targets)
+            new_targets = ancestors(global_info["hierarchy"]["parents"], global_info["hierarchy"]["start"], new_targets)
             instances[k]['targets'] = new_targets
             instances[k]['labels'] = [1 for t in new_targets]
         pd.DataFrame(instances).transpose().to_csv(output_data_file, compression='gzip')
