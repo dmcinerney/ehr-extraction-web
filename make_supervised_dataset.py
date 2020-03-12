@@ -36,6 +36,7 @@ def instances_to_data(instances_dir, output_data_dir, limit_to='annotations', cu
         old_to_new = {}
         for dir in subdirectories:
             if custom:
+                import pdb; pdb.set_trace()
                 global_info_file = join(instances_dir, dir, 'global_info.pkl')
                 if exists(global_info_file):
                     global_info, old_to_new = merge(global_info, read_pickle(global_info_file))
@@ -57,7 +58,7 @@ def instances_to_data(instances_dir, output_data_dir, limit_to='annotations', cu
             if len(new_targets) == 0:
                 del instances[k]
                 continue
-            new_targets = ancestors(global_info["start"], global_info["parents"], new_targets)
+            new_targets = ancestors(global_info["hierarchy"]["start"], global_info["hierarchy"]["parents"], new_targets)
             instances[k]['targets'] = new_targets
             instances[k]['labels'] = [1 for t in new_targets]
         pd.DataFrame(instances).transpose().to_csv(output_data_file, compression='gzip')
