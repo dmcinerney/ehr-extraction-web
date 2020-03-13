@@ -92,12 +92,12 @@ def convert_annotations(annotations, old_to_new):
 
 def add_parents_to_annotations(annotations, hierarchy):
     for k1,v1 in annotations.items():
-        for k2,v2 in v1['tag_sentences'].items():
+        for k2,v2 in list(v1['tag_sentences'].items()):
             for p in traverse_ancestors(hierarchy['parents'], hierarchy['start'], k2):
                 if p not in v1['tag_sentences'].keys():
                     v1['tag_sentences'][p] = []
                 v1['tag_sentences'][p].extend(v2)
-        for k2,v2 in v1['tag_sentences']:
+        for k2,v2 in v1['tag_sentences'].items():
             v1['tag_sentences'][k2] = list(set(v2))
     return annotations
 
