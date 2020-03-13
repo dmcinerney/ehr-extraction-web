@@ -8,17 +8,12 @@ from argparse import ArgumentParser
 from tqdm import tqdm
 from pytt.utils import read_pickle, write_pickle
 
-def ancestors(parents, start, nodes, stop_nodes=set()):
-    node_stack = copy.deepcopy(nodes)
-    new_nodes = set()
-    while len(node_stack) > 0:
-        node = node_stack.pop()
-        if node in stop_nodes: continue # don't add stop nodes
-        if node in new_nodes: continue # don't add nodes already there
-        if node == start: continue # don't add the start node
-        new_nodes.add(node)
-        node_stack.extend([parents[node]])
-    return list(new_nodes)
+def traverse_ancestors(parents, start, node):
+    if node != start:
+        node = parents[node]
+    while node != start:
+        yield node
+        node = parents[node]
 
 # limit_to is one of the following:
 #   'all' for all instances
@@ -48,15 +43,14 @@ def instances_to_data(instances_dir, output_data_dir, limit_to='annotations', cu
                     instances[idx] = read_pickle(join(
                         instances_dir, annotation_file))
                     instances[idx]['annotations'] = {}
-                instances[idx]['annotations'][dir] = convert_annotations(
-                    read_pickle(join(instances_dir, dir, annotation_file)), old_to_new)
+                instances[idx]['annotations'][dir] = add_parents_to_annotations(convert_annotations(
+                    read_pickle(join(instances_dir, dir, annotation_file)), old_to_new), global_info['hierarchy'])
         for k,v in list(instances.items()):
             new_targets = list(set([target for annotator in v['annotations'].values() for target in annotator['past-reports']['tag_sentences'].keys()
                                     if custom or not target.startswith("custom")]))
             if len(new_targets) == 0:
                 del instances[k]
                 continue
-            new_targets = ancestors(global_info["hierarchy"]["parents"], global_info["hierarchy"]["start"], new_targets)
             instances[k]['targets'] = new_targets
             instances[k]['labels'] = [1 for t in new_targets]
         pd.DataFrame(instances).transpose().to_csv(output_data_file, compression='gzip')
@@ -65,6 +59,7 @@ def instances_to_data(instances_dir, output_data_dir, limit_to='annotations', cu
     else:
         # TODO: set file generator for the subdirectory's instances
         raise NotImplementedError
+
 
 def merge(global_info1, global_info2):
     if global_info1 is None:
@@ -93,6 +88,17 @@ def merge(global_info1, global_info2):
 def convert_annotations(annotations, old_to_new):
     for k1,v1 in annotations.items():
         v1['tag_sentences'] = {newnode(old_to_new, k2):v2 for k2,v2 in v1['tag_sentences'].items()}
+    return annotations
+
+def add_parents_to_annotations(annotations, hierarchy):
+    for k1,v1 in annotations.items():
+        for k2,v2 in v1['tag_sentences'].items():
+            for p in traverse_ancestors(hierarchy['parents'], hierarchy['start'], k2):
+                if p not in v1['tag_sentences'].keys():
+                    v1['tag_sentences'][p] = []
+                v1['tag_sentences'][p].extend(v2)
+        for k2,v2 in v1['tag_sentences']:
+            v1['tag_sentences'][k2] = list(set(v2))
     return annotations
 
 def newnode(old_to_new, old):
