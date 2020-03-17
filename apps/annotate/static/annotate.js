@@ -793,7 +793,11 @@ class ValidateState extends State {
         if (!(tag in this.cached_results) && tag != "default") {
             this.queryReports();
         } else {
-            this.displayTag();
+            if (tag in this.tag_sentences) {
+                this.displayTag();
+            } else {
+                this.tagAllSentences(tag);
+            }
         }
     }
     chooseHTag(tag_selector) {
@@ -803,7 +807,11 @@ class ValidateState extends State {
         if (!(tag in this.cached_results) && tag != "default") {
             this.queryReports();
         } else {
-            this.displayTag();
+            if (tag in this.tag_sentences) {
+                this.displayTag();
+            } else {
+                this.tagAllSentences(tag);
+            }
         }
     }
     queryReports() {
@@ -820,6 +828,9 @@ class ValidateState extends State {
         } else {
             formData.append("query", tag);
         }
+        formData.append("tag", tag);
+        formData.append("description", get_query_description(tag));
+        formData.append("description_linearization", get_query_description_linearization(tag));
         this.cached_results[tag] = null;
         if (!file_from_server) {
             var x = this.annotation_element.select("#reports_file").node();
@@ -870,6 +881,10 @@ class ValidateState extends State {
         var tag = tag_selector.options[tag_selector.selectedIndex].value;
         return this.arrSum(this.cached_results[tag].heatmaps[this.heatmap][b]) - this.arrSum(this.cached_results[tag].heatmaps[this.heatmap][a]);
     }
+    removeAllTagSentences(tag) {
+        super.removeAllTagSentences(tag);
+        
+    }
 }
 
 // Note: taken from https://github.com/abisee/attn_vis/blob/master/index.html
@@ -915,4 +930,22 @@ function displayTokenizedSentence(d, i) {
     d3.select(this).append("text")
       .style("display", "inline")
       .html(word);
+}
+
+function get_query_description(tag){
+    if (hierarchy["descriptions"][tag] == "") {
+        return tag;
+    } else {
+        return hierarchy['descriptions'][tag];
+    }
+}
+
+function get_query_description_linearization(tag){
+    var description_linearization = get_query_description(tag);
+    var tag_temp = hierarchy['parents'][tag];
+    while (tag_temp in hierarchy['parents']) {
+        description_linearization = get_query_description(tag_temp)+" [CLS] "+description_linearization;
+        tag_temp = hierarchy['parents'][tag_temp];
+    }
+    return description_linearization;
 }

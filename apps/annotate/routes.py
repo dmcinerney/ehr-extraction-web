@@ -117,23 +117,31 @@ def annotate():
 
 @app.route('/query', methods=['POST'])
 def query_article():
-    query = request.form['query']
-    is_nl = request.form['is_nl'] == 'true'
+    tag = request.form['tag']
+    description = request.form['description']
+    description_linearization = request.form['description_linearization']
+    print(tag, description, description_linearization)
     index = int(request.form['index'])
     model = startup['curr_models'][request.form['model']]
     print(model)
-    results = startup['interface'].query_reports(model, startup['tab_reports'][index], query, is_nl=is_nl)
+    results = startup['interface'].query_reports(
+        model,
+        startup['tab_reports'][index],
+        tag=tag,
+        description=description,
+        description_linearization=description_linearization)
     tokenized_text = startup['tab_results'][index]['tokenized_text']
 #    threshold = .5
 #    extracted = {k:[i for i,sent in enumerate(tokenized_text[:len(results['heatmaps'][k])]) if sum(results['heatmaps'][k][i]) > threshold] for k in results['heatmaps'].keys()}
-    extracted = {k:topk([(i,sum(results['heatmaps'][k][i])) for i,sent in enumerate(tokenized_text[:len(results['heatmaps'][k])])], 10) for k in results['heatmaps'].keys()}
-    results['extracted'] = extracted
+#    extracted = {k:topk([(i,sum(results['heatmaps'][k][i])) for i,sent in enumerate(tokenized_text[:len(results['heatmaps'][k])])], 10) for k in results['heatmaps'].keys()}
+#    results['extracted'] = extracted
+    results['extracted'] = {'sentence_level_attention':[cluster[0] for cluster in results['clustering'][:20]]}
     if 'score' in results.keys():
         print(results['score'])
     return results
 
-def topk(index_score_list, k):
-    return [i for i,s in sorted(index_score_list, key=lambda x: -x[1])[:k] if s > 0]
+#def topk(index_score_list, k):
+#    return [i for i,s in sorted(index_score_list, key=lambda x: -x[1])[:k] if s > 0]
 
 @app.route('/next', methods=['POST'])
 def next_report():
