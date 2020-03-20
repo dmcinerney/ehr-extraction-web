@@ -465,7 +465,7 @@ class State {
           .append("ul")
             .attr("class", "card-body")
         var sentence_li = summary_ul.selectAll(".summary_sentence")
-          .data(function(d) { return Array.from(temp_this.tag_sentences[d]).sort(function(a,b){return temp_this.sortNumber(a, b);}).map(function(e){ return [d, e]; }); })
+          .data(function(d) { return Array.from(temp_this.tag_sentences[d]).sort(function(a,b){return temp_this.sortNumber(a, b, d);}).map(function(e){ return [d, e]; }); })
           .enter()
           .append("li")
             .attr("class", "summary_sentence")
@@ -602,7 +602,7 @@ class State {
             }
         }
     }
-    sortNumber(a, b) {
+    sortNumber(a, b, tag) {
         return a - b;
     }
     styleTags(tag_selector, refresh=true) {
@@ -793,7 +793,7 @@ class ValidateState extends State {
         if (!(tag in this.cached_results) && tag != "default") {
             this.queryReports();
         } else {
-            if (tag in this.tag_sentences) {
+            if (tag in this.tag_sentences || tag == "default") {
                 this.displayTag();
             } else {
                 this.tagAllSentences(tag);
@@ -807,7 +807,7 @@ class ValidateState extends State {
         if (!(tag in this.cached_results) && tag != "default") {
             this.queryReports();
         } else {
-            if (tag in this.tag_sentences) {
+            if (tag in this.tag_sentences || tag == "default") {
                 this.displayTag();
             } else {
                 this.tagAllSentences(tag);
@@ -876,9 +876,7 @@ class ValidateState extends State {
         super.displayTag();
         this.displayModelAnnotations();
     }
-    sortNumber(a, b) {
-        var tag_selector = this.annotation_element.select("#tag").node();
-        var tag = tag_selector.options[tag_selector.selectedIndex].value;
+    sortNumber(a, b, tag) {
         return this.arrSum(this.cached_results[tag].heatmaps[this.heatmap][b]) - this.arrSum(this.cached_results[tag].heatmaps[this.heatmap][a]);
     }
     removeAllTagSentences(tag) {

@@ -23,8 +23,11 @@ def index():
     print(startup['file'])
     tabs = [
         ('future-reports', 'Future Reports', 'annotate the reports from the 12 month window after the first mr','annotate', 1, None, True, True),
-        ('past-reports', 'Past Reports', 'annotate the last 1000 sentences before the first mr in the past reports', 'annotate', 0, None, True, False),
     ]
+    if startup['include_past_reports']:
+        tabs.append(
+            ('past-reports', 'Past Reports', 'annotate the last 1000 sentences before the first mr in the past reports', 'annotate', 0, None, True, False),
+        )
     models = startup['interface'].get_models()
     random.shuffle(models)
     print(models)
