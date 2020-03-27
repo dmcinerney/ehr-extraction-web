@@ -14,14 +14,16 @@ class State {
         this.htags = {};
         this.annotation_element.select("#htag0").attr("parent", hierarchy["start"]);
     }
-    setAnnotations(annotations) {
+    setAnnotations(annotations, refresh=true) {
         var temp_this = this;
         Object.keys(annotations.tag_sentences).forEach(function(t){
             Array.from(annotations.tag_sentences[t]).forEach(function(i){
-                temp_this.tagSentence(i, t, false);
+                temp_this.tagSentence(i, t, false, true);
             });
         });
-        this.refreshSummary();
+        if (refresh) {
+            this.refreshSummary();
+        }
     }
     getAnnotations() {
         var tag_sentences = {};
@@ -44,7 +46,7 @@ class State {
     openSentenceTagsModal(){
         $(this.annotation_element.select("#sentence_tags_modal").node()).modal('show');
     }
-    tagSentence(i, tag, refresh=true){
+    tagSentence(i, tag, refresh=true, ignore_if_tagged=false){
         if (tag == 'default') {
             this.selected_sentence = i;
             this.openSentenceTagsModal();
@@ -52,9 +54,11 @@ class State {
         } else {
             if (this.tag_sentences[tag] != null && this.tag_sentences[tag].has(i)) {
                 //alert("tag already present for this sentence");
-                this.selected_sentence = i;
-                this.openSentenceTagsModal();
-                this.displaySentenceTags(i);
+                if (!ignore_if_tagged) {
+                    this.selected_sentence = i;
+                    this.openSentenceTagsModal();
+                    this.displaySentenceTags(i);
+                }
             } else {
                 this.annotation_element.select("#sentence_"+i).classed("selected", true);
                 if (!(i in this.sentence_tags)) { this.sentence_tags[i] = new Set([]); }
@@ -743,7 +747,13 @@ class ValidateState extends State {
         this.cached_results = {};
         this.checked_senttags = {};
     }
-    // TODO: add setAnnotations Method for validate state!
+    setAnnotations(annotations, refresh=true) {
+        super.setAnnotations(annotations, false);
+        this.checked_senttags = annotations.checked_senttags;
+        if (refresh) {
+            this.refreshSummary();
+        }
+    }
     getAnnotations() {
         var annotations = super.getAnnotations();
         annotations['checked_senttags'] = this.checked_senttags;
@@ -856,7 +866,7 @@ class ValidateState extends State {
     }
     tagAllSentences(tag) {
         var temp_this = this;
-        this.cached_results[tag].extracted[this.heatmap].forEach(function(i) { temp_this.tagSentence(i, tag, false); });
+        this.cached_results[tag].extracted[this.heatmap].forEach(function(i) { temp_this.tagSentence(i, tag, false, true); });
         this.refreshSummary();
     }
     displayModelAnnotations() {
@@ -865,7 +875,7 @@ class ValidateState extends State {
         var temp_this = this;
         this.annotation_element.selectAll(".reports_sentence")
           .style("background-color", function(){
-            if (tag == 'default') { return "white"; }
+            if ((tag == 'default') || !(tag in temp_this.cached_results)) { return "white"; }
             var sentence_num = d3.select(this).attr("sentence");
             if (sentence_num > temp_this.cached_results[tag].heatmaps[temp_this.heatmap].length-1) { return "lightgrey"; }
             var sentence_attention = temp_this.cached_results[tag].heatmaps[temp_this.heatmap][sentence_num];
@@ -877,7 +887,11 @@ class ValidateState extends State {
         this.displayModelAnnotations();
     }
     sortNumber(a, b, tag) {
-        return this.arrSum(this.cached_results[tag].heatmaps[this.heatmap][b]) - this.arrSum(this.cached_results[tag].heatmaps[this.heatmap][a]);
+        if (tag in this.cached_results) {
+            return this.arrSum(this.cached_results[tag].heatmaps[this.heatmap][b]) - this.arrSum(this.cached_results[tag].heatmaps[this.heatmap][a]);
+        } else {
+            return 1;
+        }
     }
     removeAllTagSentences(tag) {
         super.removeAllTagSentences(tag);
@@ -891,7 +905,9 @@ yellowhue = 56
 function toColor(p, hue) {
     // converts a scalar value p in [0,1] to a HSL color code string with base color hue
     if (p<0 || p>1) {
-      throw sprintf("Error: p has value %.2f but should be in [0,1]", p)
+      //throw sprintf("Error: p has value %.2f but should be in [0,1]", p)
+      console.log(sprintf("Error: p has value %f but should be in [0,1]", p));
+      p = 0;
     }
     var saturation = 100; // saturation percentage
     p = 1-p; // invert so p=0 is light and p=1 is dark

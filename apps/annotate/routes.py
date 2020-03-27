@@ -52,6 +52,11 @@ def index():
     tabs = tabs
     annotations = read_pickle(join(startup["annotations_dir"], file))\
                   if exists(join(startup["annotations_dir"], file)) else {}
+    annotations_prime = {}
+    for tab in tabs:
+        key = startup['curr_models'][tab[0]] if tab[0] in startup['curr_models'].keys() else tab[0]
+        if key in annotations.keys():
+            annotations_prime[tab[0]] = annotations[key]
     if isinstance(startup["file"], str):
         instance = read_pickle(startup['file'])
         reports = pd.DataFrame(eval(instance['reports']))
@@ -67,7 +72,7 @@ def index():
         custom_tags=custom_tags,
         file=file,
         tabs=tabs,
-        annotations=annotations,
+        annotations=annotations_prime,
         patient_mrn=patient_mrn,
     )
 
